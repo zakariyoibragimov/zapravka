@@ -2056,9 +2056,14 @@
     const identityChanged = nextIdentity !== getStoredMobileIdentity();
     setMobileIdentity(nextIdentity);
     if (identityChanged) {
+      clientCard = null;
+      resetQrView();
       newsLoaded = false;
       newsItems = [];
       updateNewsBadges();
+      if (document.getElementById('tab-qr')?.classList.contains('active')) {
+        loadQR();
+      }
     }
     applyMobileLocale();
     const name = getProfileShortName(data);
@@ -2266,6 +2271,26 @@
     });
   });
 
+  function resetQrView() {
+    const qrLoading = document.getElementById('qr-loading');
+    const qrImg = document.getElementById('qr-img');
+    const qrPhone = document.getElementById('qr-phone');
+    if (qrLoading) qrLoading.style.display = 'block';
+    if (qrImg) {
+      qrImg.removeAttribute('src');
+      qrImg.style.display = 'none';
+    }
+    if (qrPhone) qrPhone.textContent = '';
+    qrLoaded = false;
+  }
+
+  function resetMobileTabs() {
+    document.querySelectorAll('.tab-page').forEach((page) => page.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach((item) => item.classList.remove('active'));
+    document.getElementById('tab-home')?.classList.add('active');
+    document.querySelector('[data-tab="home"]')?.classList.add('active');
+  }
+
   async function loadQR() {
     if (qrLoaded) return;
     const { ok, data } = await apiGet('/api/mobile/qrcode', { cacheKey: 'qrcode' });
@@ -2394,6 +2419,8 @@
     localStorage.removeItem('azs_token');
     setMobileIdentity('guest');
     token = null; profile = null; clientCard = null; qrLoaded = false; txLoaded = false; newsLoaded = false; newsItems = []; rulesLoaded = false; fuelLoading = false;
+    resetQrView();
+    resetMobileTabs();
     updateNewsBadges();
     if (fuelTimer) { clearInterval(fuelTimer); fuelTimer = null; }
     showAuthStep('step-phone');

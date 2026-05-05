@@ -1,5 +1,5 @@
-const CACHE_NAME = 'azs-bonus-mobile-v4';
-const API_CACHE_NAME = 'azs-bonus-mobile-api-v2';
+const CACHE_NAME = 'azs-bonus-mobile-v5';
+const API_CACHE_NAME = 'azs-bonus-mobile-api-v3';
 const APP_SHELL = [
   '/mobile',
   '/manifest.webmanifest',
@@ -40,6 +40,7 @@ self.addEventListener('fetch', (event) => {
   const isStaticAsset = url.pathname.startsWith('/static/') || url.pathname === '/manifest.webmanifest';
   const isMobileApi = url.pathname.startsWith('/api/mobile/');
   const isLiveNewsApi = url.pathname === '/api/mobile/news';
+  const hasAuthorization = !!request.headers.get('Authorization');
 
   if (isNavigation) {
     event.respondWith(
@@ -71,6 +72,16 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (isMobileApi) {
+    if (hasAuthorization && !isLiveNewsApi) {
+      event.respondWith(
+        fetch(request).catch(() => new Response(JSON.stringify({ detail: 'offline' }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' },
+        }))
+      );
+      return;
+    }
+
     event.respondWith(
       caches.open(API_CACHE_NAME).then(async (cache) => {
         const cached = await cache.match(request);
