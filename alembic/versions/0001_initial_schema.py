@@ -8,6 +8,7 @@ Create Date: 2025-01-01 00:00:00.000000
 from typing import Sequence, Union
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 from alembic import op
 
 revision: str = "0001"
@@ -16,8 +17,8 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-def _enum(name: str, *values: str) -> sa.Enum:
-    return sa.Enum(*values, name=name, create_type=False)
+def _enum(name: str, *values: str) -> postgresql.ENUM:
+    return postgresql.ENUM(*values, name=name, create_type=False)
 
 
 def _create_enum_if_missing(name: str, values: tuple[str, ...]) -> None:
