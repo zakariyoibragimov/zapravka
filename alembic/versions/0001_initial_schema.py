@@ -16,6 +16,10 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _enum(name: str, *values: str) -> sa.Enum:
+    return sa.Enum(*values, name=name, create_type=False)
+
+
 def _create_enum_if_missing(name: str, values: tuple[str, ...]) -> None:
     quoted_values = ", ".join(f"''{value}''" for value in values)
     op.execute(
@@ -51,7 +55,7 @@ def upgrade() -> None:
         sa.Column("phone", sa.String(20), nullable=False),
         sa.Column("name", sa.String(200), nullable=True),
         sa.Column("bonus_balance", sa.Numeric(12, 2), nullable=False, server_default="0"),
-        sa.Column("level", sa.Enum("bronze", "silver", "gold", name="client_level_enum"), nullable=False, server_default="bronze"),
+        sa.Column("level", _enum("client_level_enum", "bronze", "silver", "gold"), nullable=False, server_default="bronze"),
         sa.Column("total_spent", sa.Numeric(14, 2), nullable=False, server_default="0"),
         sa.Column("birth_date", sa.Date(), nullable=True),
         sa.Column("reg_date", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
@@ -74,10 +78,10 @@ def upgrade() -> None:
         sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
         sa.Column("client_id", sa.BigInteger(), nullable=False),
         sa.Column("ts", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("type", sa.Enum("accrual", "redemption", name="transaction_type_enum"), nullable=False),
+        sa.Column("type", _enum("transaction_type_enum", "accrual", "redemption"), nullable=False),
         sa.Column("amount_bonus", sa.Numeric(12, 2), nullable=False),
         sa.Column("purchase_amount", sa.Numeric(12, 2), nullable=True),
-        sa.Column("location", sa.Enum("fuel", "base", name="location_enum"), nullable=False),
+        sa.Column("location", _enum("location_enum", "fuel", "base"), nullable=False),
         sa.Column("fuel_liters", sa.Numeric(10, 3), nullable=True),
         sa.Column("cashier_id", sa.BigInteger(), nullable=True),
         sa.Column("check_id", sa.String(100), nullable=True),
@@ -93,9 +97,9 @@ def upgrade() -> None:
     op.create_table(
         "accrual_rules",
         sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
-        sa.Column("location", sa.Enum("fuel", "base", name="location_enum2"), nullable=False),
-        sa.Column("client_level", sa.Enum("bronze", "silver", "gold", name="client_level_enum2"), nullable=False),
-        sa.Column("accrual_type", sa.Enum("percent", "bonus_per_liter", "fixed", name="accrual_type_enum"), nullable=False),
+        sa.Column("location", _enum("location_enum2", "fuel", "base"), nullable=False),
+        sa.Column("client_level", _enum("client_level_enum2", "bronze", "silver", "gold"), nullable=False),
+        sa.Column("accrual_type", _enum("accrual_type_enum", "percent", "bonus_per_liter", "fixed"), nullable=False),
         sa.Column("accrual_value", sa.Numeric(10, 4), nullable=False),
         sa.Column("min_purchase", sa.Numeric(10, 2), nullable=False, server_default="0"),
         sa.Column("active_from", sa.Date(), nullable=False),
