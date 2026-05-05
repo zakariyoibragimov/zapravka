@@ -5,15 +5,13 @@ services:
     image: postgres:15-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: azs
-      POSTGRES_PASSWORD: azs_pass
-      POSTGRES_DB: azs_bonus
+      POSTGRES_USER: "${POSTGRES_USER:-azs}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-azs_pass}"
+      POSTGRES_DB: "${POSTGRES_DB:-azs_bonus}"
     volumes:
       - pg_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U azs -d azs_bonus"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-azs} -d ${POSTGRES_DB:-azs_bonus}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -21,8 +19,6 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -33,11 +29,13 @@ services:
     build: .
     command: >
       sh -c "alembic upgrade head"
+    env_file:
+      - .env
     environment:
-      SYNC_DATABASE_URL: postgresql+psycopg://azs:azs_pass@postgres:5432/azs_bonus
-      DATABASE_URL: postgresql+asyncpg://azs:azs_pass@postgres:5432/azs_bonus
-      REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: change-me-in-production
+      SYNC_DATABASE_URL: "${SYNC_DATABASE_URL:-postgresql+psycopg://azs:azs_pass@postgres:5432/azs_bonus}"
+      DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://azs:azs_pass@postgres:5432/azs_bonus}"
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379/0}"
+      SECRET_KEY: "${SECRET_KEY}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -48,13 +46,35 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://azs:azs_pass@postgres:5432/azs_bonus
-      SYNC_DATABASE_URL: postgresql+psycopg2://azs:azs_pass@postgres:5432/azs_bonus
-      REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: change-me-in-production
-      APP_ENV: production
-      DEBUG: "false"
+      DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://azs:azs_pass@postgres:5432/azs_bonus}"
+      SYNC_DATABASE_URL: "${SYNC_DATABASE_URL:-postgresql+psycopg://azs:azs_pass@postgres:5432/azs_bonus}"
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379/0}"
+      SECRET_KEY: "${SECRET_KEY}"
+      APP_ENV: "${APP_ENV:-production}"
+      DEBUG: "${DEBUG:-false}"
+      ADMIN_USERNAME: "${ADMIN_USERNAME:-admin}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD}"
+      SMS_PROVIDER: "${SMS_PROVIDER:-stub}"
+      SMS_PROVIDER_API_KEY: "${SMS_PROVIDER_API_KEY:-}"
+      SMS_PROVIDER_SENDER: "${SMS_PROVIDER_SENDER:-}"
+      SMS_PROVIDER_INTERNATIONAL_SENDER: "${SMS_PROVIDER_INTERNATIONAL_SENDER:-}"
+      SMS_PROVIDER_URL: "${SMS_PROVIDER_URL:-}"
+      SMS_PROVIDER_SMS_RU_URL: "${SMS_PROVIDER_SMS_RU_URL:-}"
+      SMS_PROVIDER_BYTEHAND_URL: "${SMS_PROVIDER_BYTEHAND_URL:-}"
+      SMS_PROVIDER_SMSC_URL: "${SMS_PROVIDER_SMSC_URL:-}"
+      SMS_PROVIDER_FALLBACK: "${SMS_PROVIDER_FALLBACK:-}"
+      SMS_CODE_LENGTH: "${SMS_CODE_LENGTH:-4}"
+      MOBILE_AUTH_USE_TEST_CODE: "${MOBILE_AUTH_USE_TEST_CODE:-false}"
+      MOBILE_AUTH_MAX_CODE_ATTEMPTS: "${MOBILE_AUTH_MAX_CODE_ATTEMPTS:-2}"
+      PUBLIC_APP_URL: "${PUBLIC_APP_URL:-http://localhost:8000}"
+      APP_TIMEZONE: "${APP_TIMEZONE:-Asia/Dushanbe}"
+      MAX_REDEMPTION_PERCENT: "${MAX_REDEMPTION_PERCENT:-100}"
+      BONUS_EXPIRY_MONTHS: "${BONUS_EXPIRY_MONTHS:-12}"
+      ANDROID_APP_PACKAGE: "${ANDROID_APP_PACKAGE:-com.azsbonus.app}"
+      ANDROID_SHA256_CERT_FINGERPRINTS: "${ANDROID_SHA256_CERT_FINGERPRINTS:-}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -67,11 +87,14 @@ services:
     build: .
     command: celery -A app.celery_app worker --loglevel=info --concurrency=4
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://azs:azs_pass@postgres:5432/azs_bonus
-      SYNC_DATABASE_URL: postgresql+psycopg2://azs:azs_pass@postgres:5432/azs_bonus
-      REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: change-me-in-production
+      DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://azs:azs_pass@postgres:5432/azs_bonus}"
+      SYNC_DATABASE_URL: "${SYNC_DATABASE_URL:-postgresql+psycopg://azs:azs_pass@postgres:5432/azs_bonus}"
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379/0}"
+      SECRET_KEY: "${SECRET_KEY}"
+      APP_TIMEZONE: "${APP_TIMEZONE:-Asia/Dushanbe}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -82,11 +105,14 @@ services:
     build: .
     command: celery -A app.celery_app beat --loglevel=info
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://azs:azs_pass@postgres:5432/azs_bonus
-      SYNC_DATABASE_URL: postgresql+psycopg2://azs:azs_pass@postgres:5432/azs_bonus
-      REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: change-me-in-production
+      DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://azs:azs_pass@postgres:5432/azs_bonus}"
+      SYNC_DATABASE_URL: "${SYNC_DATABASE_URL:-postgresql+psycopg://azs:azs_pass@postgres:5432/azs_bonus}"
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379/0}"
+      SECRET_KEY: "${SECRET_KEY}"
+      APP_TIMEZONE: "${APP_TIMEZONE:-Asia/Dushanbe}"
     depends_on:
       postgres:
         condition: service_healthy
