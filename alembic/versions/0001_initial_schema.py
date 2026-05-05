@@ -16,13 +16,34 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _create_enum_if_missing(name: str, values: tuple[str, ...]) -> None:
+    quoted_values = ", ".join(f"''{value}''" for value in values)
+    op.execute(
+        sa.text(
+            f"""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM pg_type
+                    WHERE typname = '{name}'
+                ) THEN
+                    EXECUTE 'CREATE TYPE {name} AS ENUM ({quoted_values})';
+                END IF;
+            END
+            $$;
+            """
+        )
+    )
+
+
 def upgrade() -> None:
-    op.execute("CREATE TYPE client_level_enum AS ENUM ('bronze', 'silver', 'gold')")
-    op.execute("CREATE TYPE transaction_type_enum AS ENUM ('accrual', 'redemption')")
-    op.execute("CREATE TYPE location_enum AS ENUM ('fuel', 'base')")
-    op.execute("CREATE TYPE location_enum2 AS ENUM ('fuel', 'base')")
-    op.execute("CREATE TYPE client_level_enum2 AS ENUM ('bronze', 'silver', 'gold')")
-    op.execute("CREATE TYPE accrual_type_enum AS ENUM ('percent', 'bonus_per_liter', 'fixed')")
+    _create_enum_if_missing("client_level_enum", ("bronze", "silver", "gold"))
+    _create_enum_if_missing("transaction_type_enum", ("accrual", "redemption"))
+    _create_enum_if_missing("location_enum", ("fuel", "base"))
+    _create_enum_if_missing("location_enum2", ("fuel", "base"))
+    _create_enum_if_missing("client_level_enum2", ("bronze", "silver", "gold"))
+    _create_enum_if_missing("accrual_type_enum", ("percent", "bonus_per_liter", "fixed"))
 
     op.create_table(
         "clients",
