@@ -58,6 +58,11 @@ async def mobile_page(request: Request):
     return templates.TemplateResponse(request, "mobile.html")
 
 
+@router.get("/m")
+async def mobile_short_link():
+    return RedirectResponse(url="/mobile", status_code=307)
+
+
 @router.get("/privacy", response_class=HTMLResponse)
 async def privacy_policy_page(request: Request):
     return templates.TemplateResponse(
