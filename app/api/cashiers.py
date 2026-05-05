@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import logging
 from typing import NamedTuple, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -18,6 +19,7 @@ from app.utils.datetime import local_now
 
 router = APIRouter(prefix="/api/cashiers", tags=["cashiers"])
 security = HTTPBearer(auto_error=False)
+logger = logging.getLogger(__name__)
 
 
 class CashierLoginRequest(BaseModel):
@@ -67,6 +69,19 @@ def _serialize_shift(shift: CashierShift) -> dict:
     }
 
 
+def _empty_shift_summary() -> dict:
+    return {
+        "transactions_count": 0,
+        "accrual_transactions_count": 0,
+        "redemption_transactions_count": 0,
+        "accrued_bonus_total": 0.0,
+        "redeemed_bonus_total": 0.0,
+        "fuel_sales_count": 0,
+        "fuel_sales_total": 0.0,
+        "fuel_liters_total": 0.0,
+    }
+
+
 async def get_active_cashier_shift(db: AsyncSession, cashier_id: int) -> Optional[CashierShift]:
     stmt = (
         select(CashierShift)
@@ -78,26 +93,25 @@ async def get_active_cashier_shift(db: AsyncSession, cashier_id: int) -> Optiona
 
 
 async def build_cashier_shift_summary(db: AsyncSession, shift: CashierShift) -> dict:
-    shift_start = _normalize_dt(shift.started_at)
-    shift_end = _normalize_dt(shift.ended_at) or _current_shift_dt()
-    summary = {
-        "transactions_count": 0,
-        "accrual_transactions_count": 0,
-        "redemption_transactions_count": 0,
-        "accrued_bonus_total": 0.0,
-        "redeemed_bonus_total": 0.0,
-        "fuel_sales_count": 0,
-        "fuel_sales_total": 0.0,
-        "fuel_liters_total": 0.0,
-    }
-    if shift_start is None:
+    shift_start_db = shift.started_at
+    shift_end_db = shift.ended_at or _current_shift_dt()
+    shift_start = _normalize_dt(shift_start_db)
+    shift_end = _normalize_dt(shift_end_db)
+    summary = _empty_shift_summary()
+    if shift_start is None or shift_end is None:
         return summary
 
     operation_keys: set[str] = set()
 
     txs = (
         await db.execute(
-            select(Transaction).where(Transaction.cashier_id == shift.cashier_id).order_by(Transaction.ts, Transaction.id)
+            select(Transaction)
+            .where(
+                Transaction.cashier_id == shift.cashier_id,
+                Transaction.ts >= shift_start_db,
+                Transaction.ts <= shift_end_db,
+            )
+            .order_by(Transaction.ts, Transaction.id)
         )
     ).scalars().all()
     for tx in txs:
@@ -114,7 +128,13 @@ async def build_cashier_shift_summary(db: AsyncSession, shift: CashierShift) -> 
 
     fuel_sales = (
         await db.execute(
-            select(FuelSale).where(FuelSale.cashier_id == shift.cashier_id).order_by(FuelSale.sale_date, FuelSale.id)
+            select(FuelSale)
+            .where(
+                FuelSale.cashier_id == shift.cashier_id,
+                FuelSale.sale_date >= shift_start_db,
+                FuelSale.sale_date <= shift_end_db,
+            )
+            .order_by(FuelSale.sale_date, FuelSale.id)
         )
     ).scalars().all()
     for sale in fuel_sales:
@@ -249,10 +269,15 @@ async def cashier_shift_status(
     shift = await get_active_cashier_shift(db, cashier.id)
     if shift is None:
         return {"has_active_shift": False, "shift": None, "summary": None}
+    try:
+        summary = await build_cashier_shift_summary(db, shift)
+    except Exception:
+        logger.exception("Failed to build active shift summary", extra={"cashier_id": cashier.id, "shift_id": shift.id})
+        summary = _empty_shift_summary()
     return {
         "has_active_shift": True,
         "shift": _serialize_shift(shift),
-        "summary": await build_cashier_shift_summary(db, shift),
+        "summary": summary,
     }
 
 
