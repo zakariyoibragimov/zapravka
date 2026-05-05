@@ -1,0 +1,2447 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="АЗС Бонус — мобильное приложение бонусной программы для клиентов АЗС.">
+  <meta name="theme-color" content="#0d6efd">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icons/azs-bonus-icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <title>АЗС Бонус</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --blue: #0b63f6;
+      --blue-dark: #0949b8;
+      --green: #159a7a;
+      --orange: #f28b28;
+      --purple: #4f46e5;
+      --ink: #102033;
+      --bg: #edf3fb;
+      --bg-soft: #dfe9fb;
+      --card: #ffffff;
+      --card-soft: rgba(255,255,255,.82);
+      --text: #102033;
+      --muted: #66758a;
+      --border: rgba(148,163,184,.24);
+      --radius: 28px;
+      --radius-sm: 18px;
+      --shadow: 0 24px 60px rgba(15, 23, 42, .12);
+      --shadow-soft: 0 14px 30px rgba(15, 23, 42, .08);
+      --accent: #0d6efd;
+    }
+
+    html {
+      background:
+        radial-gradient(circle at top left, rgba(11,99,246,.16), transparent 36%),
+        radial-gradient(circle at top right, rgba(79,70,229,.12), transparent 28%),
+        linear-gradient(180deg, #f5f8fe 0%, var(--bg) 100%);
+      min-height: 100%;
+    }
+
+    body {
+      font-family: 'Manrope', 'Segoe UI', sans-serif;
+      background: transparent;
+      color: var(--text);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: '';
+      position: fixed;
+      inset: auto;
+      border-radius: 999px;
+      filter: blur(18px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::before {
+      width: 280px;
+      height: 280px;
+      top: -80px;
+      right: -90px;
+      background: rgba(11,99,246,.12);
+    }
+
+    body::after {
+      width: 220px;
+      height: 220px;
+      bottom: 80px;
+      left: -90px;
+      background: rgba(21,154,122,.10);
+    }
+
+    /* SCREENS */
+    .screen { display: none; min-height: 100vh; flex-direction: column; position: relative; z-index: 1; }
+    .screen.active { display: flex; }
+
+    /* LOGIN SCREEN */
+    #screen-login {
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 18% 14%, rgba(255,255,255,.16), transparent 0 24%),
+        radial-gradient(circle at 84% 10%, rgba(125,211,252,.28), transparent 30%),
+        radial-gradient(circle at 50% 100%, rgba(45,212,191,.12), transparent 34%),
+        linear-gradient(135deg, #071935 0%, #0a47b7 28%, #0b63f6 58%, #3f54df 100%);
+      align-items: center;
+      justify-content: center;
+      padding: clamp(24px, 4vw, 42px);
+    }
+    #screen-login::before,
+    #screen-login::after {
+      content: '';
+      position: absolute;
+      border-radius: 999px;
+      pointer-events: none;
+      filter: blur(8px);
+      opacity: .75;
+    }
+    #screen-login::before {
+      width: min(54vw, 520px);
+      height: min(54vw, 520px);
+      top: clamp(-120px, -8vw, -40px);
+      left: clamp(-160px, -12vw, -40px);
+      background: radial-gradient(circle, rgba(255,255,255,.16) 0%, rgba(255,255,255,0) 72%);
+    }
+    #screen-login::after {
+      width: min(42vw, 420px);
+      height: min(42vw, 420px);
+      right: clamp(-110px, -8vw, -30px);
+      bottom: clamp(-120px, -10vw, -40px);
+      background: radial-gradient(circle, rgba(45,212,191,.18) 0%, rgba(45,212,191,0) 72%);
+    }
+    .login-shell {
+      width: min(100%, 1120px);
+      display: grid;
+      gap: clamp(24px, 4vw, 42px);
+      align-items: stretch;
+      position: relative;
+      z-index: 1;
+    }
+    .login-brand-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      justify-content: center;
+      gap: 20px;
+      padding: clamp(18px, 3vw, 34px);
+      position: relative;
+    }
+    .login-brand-panel::before {
+      content: '';
+      position: absolute;
+      inset: clamp(12px, 2vw, 20px);
+      border-radius: 36px;
+      background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.03));
+      border: 1px solid rgba(255,255,255,.1);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+      backdrop-filter: blur(16px);
+      z-index: -1;
+    }
+    .login-logo {
+      width: clamp(88px, 14vw, 112px);
+      height: clamp(88px, 14vw, 112px);
+      background: linear-gradient(180deg, rgba(255,255,255,.24), rgba(255,255,255,.12));
+      border: 1px solid rgba(255,255,255,.22);
+      border-radius: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 24px 54px rgba(7, 25, 56, .24);
+      backdrop-filter: blur(14px);
+    }
+    .login-logo svg { width: clamp(46px, 8vw, 56px); height: clamp(46px, 8vw, 56px); }
+    .login-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.2);
+      color: rgba(255,255,255,.88);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      box-shadow: 0 12px 30px rgba(7, 25, 56, .16);
+      backdrop-filter: blur(12px);
+    }
+    .login-kicker-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #6ee7b7;
+      box-shadow: 0 0 0 6px rgba(110,231,183,.14);
+    }
+    .login-brand-copy {
+      display: grid;
+      gap: 10px;
+      justify-items: center;
+    }
+    .login-title { color: #fff; font-size: clamp(38px, 7vw, 58px); font-weight: 800; text-align: center; letter-spacing: -.04em; line-height: 1.02; }
+    .login-subtitle { color: rgba(255,255,255,.84); font-size: clamp(15px, 2.8vw, 19px); line-height: 1.65; max-width: 440px; text-align: center; }
+    .login-glance {
+      width: 100%;
+      max-width: 460px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .login-glance-card {
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+      padding: 16px 12px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.08));
+      border: 1px solid rgba(255,255,255,.14);
+      box-shadow: 0 18px 36px rgba(5, 16, 38, .16);
+      backdrop-filter: blur(18px);
+    }
+    .login-glance-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.12);
+      color: #fff;
+    }
+    .login-glance-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+    .login-glance-label {
+      color: rgba(255,255,255,.88);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .login-card {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(244,247,255,.94));
+      backdrop-filter: blur(18px);
+      border-radius: 36px;
+      padding: clamp(26px, 4vw, 40px);
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      border: 1px solid rgba(255,255,255,.7);
+      box-shadow: 0 32px 80px rgba(6, 18, 45, .26);
+    }
+    .login-card::before {
+      content: '';
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 6px;
+      background: linear-gradient(90deg, #7dd3fc 0%, #0b63f6 46%, #4f46e5 100%);
+    }
+    .login-card::after {
+      content: '';
+      position: absolute;
+      top: -72px;
+      right: -72px;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(11,99,246,.16) 0%, rgba(11,99,246,0) 72%);
+    }
+    .login-card-inner {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: 18px;
+    }
+    .login-card-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .login-card-top-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--blue);
+      background: linear-gradient(180deg, rgba(11,99,246,.12), rgba(11,99,246,.05));
+      border: 1px solid rgba(11,99,246,.12);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.72);
+    }
+    .login-card-top-icon svg {
+      width: 22px;
+      height: 22px;
+    }
+    .login-card-top-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(11,99,246,.26), rgba(148,163,184,.06));
+    }
+    .login-step {
+      display: grid;
+      gap: 0;
+    }
+    .login-card h2 { font-size: 24px; font-weight: 800; margin-bottom: 18px; color: var(--ink); letter-spacing: -.03em; line-height: 1.15; }
+    .form-group { margin-bottom: 18px; }
+    .form-group label { display: block; font-size: 11px; color: #55657a; margin-bottom: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    .form-control {
+      width: 100%;
+      padding: 16px 18px;
+      font-size: 16px;
+      border: 1px solid rgba(148,163,184,.28);
+      border-radius: 18px;
+      background: rgba(255,255,255,.82);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 10px 24px rgba(15,23,42,.04);
+      transition: border-color .2s, box-shadow .2s, transform .2s, background .2s;
+      outline: none;
+    }
+    .form-control::placeholder { color: #94a3b8; }
+    .form-control:focus { border-color: rgba(11,99,246,.48); background: #fff; box-shadow: 0 0 0 4px rgba(11,99,246,.1), 0 12px 24px rgba(11,99,246,.08); transform: translateY(-1px); }
+    .btn {
+      width: 100%;
+      padding: 16px 18px;
+      font-size: 16px;
+      font-weight: 800;
+      border: none;
+      border-radius: 18px;
+      cursor: pointer;
+      transition: all .2s ease;
+      letter-spacing: .02em;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--blue) 0%, #2769ff 55%, var(--purple) 100%);
+      color: #fff;
+      box-shadow: 0 18px 28px rgba(11,99,246,.24);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 22px 34px rgba(11,99,246,.26); }
+    .btn-primary:active { background: var(--blue-dark); transform: scale(.98); }
+    .btn-primary:disabled { background: #adb5bd; cursor: not-allowed; }
+    .btn-outline { background: rgba(255,255,255,.82); color: var(--blue); border: 1px solid rgba(11,99,246,.16); margin-top: 12px; box-shadow: inset 0 0 0 1px rgba(11,99,246,.04), 0 10px 24px rgba(15,23,42,.04); }
+    .btn-outline:active { background: rgba(13,110,253,.08); }
+    .auth-actions { display: grid; gap: 12px; }
+    .auth-links { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
+    .auth-text-btn {
+      border: none;
+      background: none;
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 0;
+    }
+    .auth-text-btn:disabled { opacity: .6; cursor: progress; }
+    .step-summary {
+      margin: -2px 0 14px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(11,99,246,.06);
+      color: #44556b;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .step-summary strong { color: var(--ink); }
+    .step-hint {
+      font-size: 13px;
+      color: #5c6d82;
+      text-align: center;
+      margin-top: 14px;
+      line-height: 1.6;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(11,99,246,.06);
+    }
+    .step-hint b { color: var(--blue); }
+    .login-legal {
+      margin-top: 4px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(148,163,184,.18);
+      font-size: 13px;
+      color: #64748b;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .login-legal a {
+      color: var(--blue);
+      font-weight: 700;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .error-msg {
+      background: rgba(255,243,205,.96);
+      color: #856404;
+      border: 1px solid rgba(245,158,11,.2);
+      border-radius: 16px;
+      padding: 12px 14px;
+      font-size: 13px;
+      margin-bottom: 14px;
+      display: none;
+      box-shadow: 0 12px 20px rgba(245,158,11,.08);
+    }
+    .error-msg.show { display: block; }
+
+    /* MAIN APP */
+    #screen-app { background: transparent; }
+    .app-shell { width: min(100%, 1160px); margin: 0 auto; min-height: 100vh; }
+    .app-header {
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,.18), transparent 25%),
+        radial-gradient(circle at bottom right, rgba(173,220,255,.18), transparent 30%),
+        linear-gradient(135deg, #0d59df 0%, #0b63f6 42%, #4f46e5 100%);
+      margin: clamp(12px, 2vw, 24px) clamp(12px, 3vw, 24px) 0;
+      padding: clamp(28px, 5vw, 46px) clamp(18px, 5vw, 36px) clamp(90px, 10vw, 118px);
+      position: relative;
+      overflow: hidden;
+      border-radius: 34px;
+      box-shadow: 0 28px 60px rgba(34, 61, 139, .22);
+    }
+    .app-header::before {
+      content: ''; position: absolute; top: -46px; right: -36px;
+      width: 220px; height: 220px; background: rgba(255,255,255,.09);
+      border-radius: 50%;
+    }
+    .app-header::after {
+      content: '';
+      position: absolute;
+      inset: auto auto 18px 18px;
+      width: 128px;
+      height: 128px;
+      border-radius: 28px;
+      background: linear-gradient(135deg, rgba(255,255,255,.1), rgba(255,255,255,0));
+      transform: rotate(20deg);
+    }
+    .app-header-inner { position: relative; z-index: 2; }
+    .header-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; }
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+    .header-greeting { color: rgba(255,255,255,.8); font-size: 13px; margin-bottom: 6px; letter-spacing: .04em; text-transform: uppercase; }
+    .header-name { color: #fff; font-size: clamp(24px, 5vw, 36px); font-weight: 800; letter-spacing: -.03em; }
+    .bell-btn,
+    .logout-btn {
+      background: rgba(255,255,255,.16);
+      border: 1px solid rgba(255,255,255,.22);
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      position: relative;
+      z-index: 2;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
+      backdrop-filter: blur(10px);
+    }
+    .bell-btn {
+      width: 46px;
+      height: 46px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .bell-btn svg { width: 20px; height: 20px; }
+    .bell-badge,
+    .nav-badge {
+      position: absolute;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: #ff6b4a;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      box-shadow: 0 10px 20px rgba(255,107,74,.28);
+    }
+    .bell-badge { top: -4px; right: -4px; }
+    .nav-badge { top: 5px; right: 12px; }
+    .badge-hidden { display: none; }
+    .balance-card {
+      background: rgba(255,255,255,.94);
+      backdrop-filter: blur(18px);
+      border-radius: 30px;
+      margin: -70px clamp(16px, 4vw, 24px) 0;
+      padding: clamp(22px, 4vw, 30px);
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,.46);
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      position: relative;
+      z-index: 3;
+    }
+    .balance-icon { width: 60px; height: 60px; background: linear-gradient(135deg, var(--blue), var(--purple)); border-radius: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 16px 26px rgba(79,70,229,.18); }
+    .balance-icon svg { width: 30px; height: 30px; color: #fff; }
+    .balance-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+    .balance-amount { font-size: clamp(30px, 6vw, 42px); font-weight: 800; color: var(--text); letter-spacing: -.04em; }
+    .balance-unit { font-size: 14px; color: var(--muted); margin-left: 6px; font-weight: 600; }
+
+    /* CONTENT */
+    .app-scroll { flex: 1; overflow-y: auto; }
+    .content { padding: clamp(22px, 4vw, 34px) clamp(16px, 4vw, 24px) 140px; flex: 1; width: min(100%, 1120px); margin: 0 auto; }
+    .section-title { font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .14em; margin-bottom: 14px; }
+
+    /* QUICK ACTIONS */
+    .quick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .quick-btn {
+      background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.92));
+      border-radius: 24px;
+      padding: 20px 18px;
+      text-align: left;
+      box-shadow: var(--shadow-soft);
+      cursor: pointer;
+      transition: all .18s ease;
+      border: 1px solid rgba(255,255,255,.64);
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-start;
+      min-height: 138px;
+    }
+    .quick-btn::before {
+      content: '';
+      position: absolute;
+      inset: auto -32px -42px auto;
+      width: 110px;
+      height: 110px;
+      border-radius: 999px;
+      background: rgba(11,99,246,.06);
+    }
+    .quick-btn:active { transform: scale(.985); box-shadow: none; }
+    .quick-icon { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 0 16px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.45); }
+    .quick-icon svg { width: 24px; height: 24px; }
+    .qi-qr { background: linear-gradient(135deg, rgba(11,99,246,.16), rgba(11,99,246,.08)); color: #0d6efd; }
+    .qi-history { background: linear-gradient(135deg, rgba(21,154,122,.18), rgba(21,154,122,.08)); color: #198754; }
+    .qi-rules { background: linear-gradient(135deg, rgba(242,139,40,.18), rgba(242,139,40,.08)); color: #fd7e14; }
+    .qi-profile { background: linear-gradient(135deg, rgba(79,70,229,.18), rgba(79,70,229,.08)); color: #4f46e5; }
+    .quick-label { font-size: 14px; font-weight: 800; color: var(--text); line-height: 1.35; max-width: 10ch; }
+
+    /* STATS ROW */
+    .stats-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .stat-card { background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.92)); border-radius: 24px; padding: 20px; box-shadow: var(--shadow-soft); border: 1px solid rgba(255,255,255,.58); }
+    .stat-value { font-size: clamp(24px, 5vw, 34px); font-weight: 800; letter-spacing: -.04em; }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+    .stat-blue { color: var(--blue); }
+    .stat-green { color: var(--green); }
+    .expiry-notice { background: linear-gradient(135deg, rgba(242,139,40,.14), rgba(255,248,225,.92)); border: 1px solid rgba(242,139,40,.18); border-radius: 24px; padding: 18px 20px; box-shadow: var(--shadow-soft); margin-bottom: 24px; }
+    .expiry-notice-title { font-size: 12px; color: #8f4e00; text-transform: uppercase; letter-spacing: .1em; font-weight: 800; margin-bottom: 8px; }
+    .expiry-notice-main { font-size: 18px; font-weight: 800; color: var(--text); }
+    .expiry-notice-sub { margin-top: 6px; color: #6b7280; font-size: 13px; line-height: 1.55; }
+
+    /* QR PANEL */
+    .qr-panel { background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.94)); border-radius: 30px; padding: clamp(24px, 5vw, 36px); text-align: center; box-shadow: var(--shadow); margin-bottom: 24px; border: 1px solid rgba(255,255,255,.62); display: flex; flex-direction: column; align-items: center; }
+    .qr-visual { width: 100%; min-height: min(72vw, 320px); display: flex; align-items: center; justify-content: center; margin-bottom: 18px; padding: 18px; border-radius: 24px; background: linear-gradient(180deg, rgba(11,99,246,.05), rgba(79,70,229,.02)); }
+    .qr-panel img { width: min(62vw, 260px); height: min(62vw, 260px); border-radius: 18px; box-shadow: 0 20px 40px rgba(15, 23, 42, .12); display: block; margin: 0 auto; }
+    .qr-phone { width: 100%; font-size: 20px; font-weight: 800; margin-top: 0; letter-spacing: 2px; text-align: center; }
+    .qr-hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
+    .qr-loader { width: 60px; height: 60px; border: 4px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin .8s linear infinite; margin: 30px auto; }
+
+    /* NEWS */
+    .news-list { display: grid; gap: 14px; }
+    .news-card {
+      background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.94));
+      border-radius: 26px;
+      padding: 20px;
+      box-shadow: var(--shadow-soft);
+      border: 1px solid rgba(255,255,255,.58);
+    }
+    .news-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .news-card-title { font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -.03em; }
+    .news-card-date { font-size: 12px; color: var(--muted); white-space: nowrap; }
+    .news-card-body { font-size: 14px; line-height: 1.7; color: #344256; white-space: pre-wrap; }
+
+    /* HISTORY */
+    .tx-list { background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.94)); border-radius: 28px; overflow: hidden; box-shadow: var(--shadow-soft); border: 1px solid rgba(255,255,255,.58); }
+    .tx-item { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-bottom: 1px solid rgba(148,163,184,.18); }
+    .tx-item:last-child { border-bottom: none; }
+    .tx-ico { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .tx-ico svg { width: 20px; height: 20px; }
+    .tx-accrue { background: #e8f5e9; color: #198754; }
+    .tx-redeem { background: #fdecea; color: #dc3545; }
+    .tx-cancel { background: #fff3cd; color: #9a6700; }
+    .tx-info { flex: 1; }
+    .tx-title { font-size: 14px; font-weight: 700; }
+    .tx-date { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .tx-meta { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.55; }
+    .tx-amount { font-size: 15px; font-weight: 800; }
+    .tx-plus { color: var(--green); }
+    .tx-minus { color: #dc3545; }
+    .tx-empty { padding: 34px; text-align: center; color: var(--muted); font-size: 14px; background: rgba(255,255,255,.65); border-radius: 24px; border: 1px dashed rgba(148,163,184,.28); }
+
+    /* FUEL PRICES */
+    .fuel-list { background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.94)); border-radius: 28px; overflow: hidden; box-shadow: var(--shadow-soft); border: 1px solid rgba(255,255,255,.58); }
+    .fuel-item { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 18px; border-bottom: 1px solid rgba(148,163,184,.18); }
+    .fuel-item:last-child { border-bottom: none; }
+    .fuel-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .fuel-icon { width: 46px; height: 46px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex: 0 0 auto; }
+    .fuel-ic-blue   { background: rgba(13,110,253,.12); color: var(--blue); }
+    .fuel-ic-green  { background: rgba(25,135,84,.12);  color: var(--green); }
+    .fuel-ic-orange { background: rgba(253,126,20,.12);  color: var(--orange); }
+    .fuel-ic-purple { background: rgba(111,66,193,.12);  color: var(--purple); }
+    .fuel-name { font-size: 15px; font-weight: 800; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 230px; }
+    .fuel-code { font-size: 11px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; margin-top: 2px; }
+    .fuel-price { font-size: 17px; font-weight: 900; white-space: nowrap; }
+    .fuel-updated { font-size: 11px; color: var(--muted); margin-top: 10px; text-align: right; padding: 0 6px; }
+
+    /* RULES */
+    .rules-list { display: grid; gap: 14px; }
+    .rule-card { background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.94)); border-radius: 26px; padding: 20px; box-shadow: var(--shadow-soft); border: 1px solid rgba(255,255,255,.58); }
+    .rule-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .rule-badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .rb-fuel { background: #e7f3ff; color: #0d6efd; }
+    .rb-base { background: #e8f5e9; color: #198754; }
+    .rule-value { font-size: clamp(24px, 5vw, 30px); font-weight: 800; color: var(--text); letter-spacing: -.03em; }
+    .rule-value span { font-size: 14px; font-weight: 500; color: var(--muted); }
+    .rule-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .rule-tag { background: rgba(232,238,248,.92); border-radius: 999px; padding: 6px 12px; font-size: 12px; color: var(--muted); font-weight: 600; }
+
+    /* PROFILE PAGE */
+    .profile-card { background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.94)); border-radius: 28px; padding: 22px; box-shadow: var(--shadow-soft); margin-bottom: 16px; border: 1px solid rgba(255,255,255,.58); }
+    .profile-hero { display: flex; align-items: center; gap: 16px; padding-bottom: 18px; margin-bottom: 8px; border-bottom: 1px solid rgba(148,163,184,.18); }
+    .profile-avatar { width: 84px; height: 84px; border-radius: 26px; overflow: hidden; flex: 0 0 auto; background: linear-gradient(135deg, var(--blue), var(--purple)); box-shadow: 0 18px 34px rgba(79,70,229,.18); display: flex; align-items: center; justify-content: center; }
+    .profile-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .profile-avatar-fallback { color: #fff; font-size: 28px; font-weight: 800; letter-spacing: .04em; }
+    .profile-hero-copy { min-width: 0; }
+    .profile-hero-name { font-size: 20px; font-weight: 800; color: var(--text); letter-spacing: -.03em; line-height: 1.2; }
+    .profile-hero-phone { margin-top: 6px; color: var(--muted); font-size: 13px; }
+    .profile-row { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 12px 0; border-bottom: 1px solid rgba(148,163,184,.18); }
+    .profile-row:last-child { border-bottom: none; }
+    .profile-key { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+    .profile-val { font-size: 14px; font-weight: 700; text-align: right; }
+    .profile-edit-grid { display: grid; gap: 14px; }
+    .profile-edit-input { width: 100%; padding: 12px 14px; font-size: 15px; border: 1.5px solid var(--border); border-radius: 14px; background: #f8f9fa; outline: none; }
+    .profile-photo-block { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .profile-photo-preview { width: 74px; height: 74px; border-radius: 22px; overflow: hidden; flex: 0 0 auto; background: linear-gradient(135deg, var(--blue), var(--purple)); box-shadow: 0 14px 28px rgba(79,70,229,.18); display: flex; align-items: center; justify-content: center; }
+    .profile-photo-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .profile-photo-actions { display: flex; flex-direction: column; gap: 8px; }
+    .profile-photo-input { display: none; }
+    .profile-photo-pick { border: none; background: linear-gradient(135deg, #0b63f6, #3b82f6); color: #fff; border-radius: 14px; padding: 11px 16px; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: 0 14px 26px rgba(11,99,246,.22); }
+    .profile-photo-pick:disabled { opacity: .7; cursor: progress; }
+    .profile-photo-meta { font-size: 12px; color: var(--muted); }
+    .profile-photo-remove { border: 1px solid rgba(220,53,69,.18); background: rgba(220,53,69,.08); color: #dc3545; border-radius: 12px; padding: 9px 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .profile-section { margin-top: 18px; padding-top: 18px; border-top: 1px solid rgba(148,163,184,.18); }
+    .profile-section-title { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; font-weight: 800; margin-bottom: 12px; }
+    .profile-chip-list { display: grid; gap: 10px; }
+    .profile-chip { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-radius: 16px; padding: 12px 14px; background: rgba(241,245,249,.78); }
+    .profile-chip-title { font-size: 13px; font-weight: 700; color: var(--text); }
+    .profile-chip-subtitle { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .profile-chip-value { font-size: 14px; font-weight: 800; color: var(--blue); text-align: right; }
+    .profile-section-empty { border: 1px dashed rgba(148,163,184,.28); border-radius: 16px; padding: 14px; color: var(--muted); font-size: 13px; text-align: center; }
+    .support-footer { padding: 0 clamp(16px, 4vw, 24px) 120px; width: min(100%, 1120px); margin: 0 auto; }
+    .support-card { background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.94)); border-radius: 24px; padding: 16px 18px; border: 1px solid rgba(255,255,255,.58); box-shadow: var(--shadow-soft); display: grid; gap: 12px; }
+    .support-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .support-copy { min-width: 0; }
+    .support-title { font-size: 14px; font-weight: 800; color: var(--text); }
+    .support-text { margin-top: 4px; font-size: 12px; color: var(--muted); line-height: 1.55; }
+    .support-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; height: 40px; border-radius: 14px; background: linear-gradient(135deg, rgba(11,99,246,.14), rgba(79,70,229,.12)); color: var(--blue); font-weight: 900; letter-spacing: .04em; flex: 0 0 auto; }
+    .support-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .support-chip { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 18px; text-decoration: none; color: var(--text); background: rgba(239,245,255,.92); border: 1px solid rgba(148,163,184,.18); min-width: 0; }
+    .support-chip-policy { background: rgba(232,245,233,.96); }
+    .support-chip-icon { width: 38px; height: 38px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: #fff; color: var(--blue); flex: 0 0 auto; box-shadow: inset 0 0 0 1px rgba(11,99,246,.08); }
+    .support-chip-icon svg { width: 18px; height: 18px; }
+    .support-chip-copy { min-width: 0; }
+    .support-chip-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+    .support-chip-value { margin-top: 3px; font-size: 13px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* NAV */
+    .bottom-nav {
+      position: fixed;
+      left: 50%;
+      bottom: max(12px, env(safe-area-inset-bottom, 0));
+      transform: translateX(-50%);
+      width: min(calc(100% - 20px), 760px);
+      background: rgba(255,255,255,.84);
+      border: 1px solid rgba(148,163,184,.22);
+      display: flex;
+      padding: 10px;
+      z-index: 100;
+      border-radius: 28px;
+      box-shadow: 0 22px 42px rgba(15, 23, 42, .14);
+      backdrop-filter: blur(22px);
+    }
+    .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 6px; cursor: pointer; transition: color .15s, background .15s, transform .15s; color: var(--muted); border: none; background: none; border-radius: 18px; min-height: 64px; position: relative; }
+    .nav-item.active { color: var(--blue); background: linear-gradient(180deg, rgba(11,99,246,.12), rgba(11,99,246,.04)); }
+    .nav-item svg { width: 22px; height: 22px; margin-bottom: 3px; }
+    .nav-item span { font-size: 10px; font-weight: 700; letter-spacing: .3px; }
+    .nav-dot { width: 6px; height: 6px; background: var(--blue); border-radius: 50%; margin: 0 auto 3px; visibility: hidden; box-shadow: 0 0 0 6px rgba(11,99,246,.08); }
+    .nav-item.active .nav-dot { visibility: visible; }
+
+    /* TAB PAGES */
+    .tab-page { display: none; padding-bottom: 80px; }
+    .tab-page.active { display: block; animation: fadeUp .35s ease; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* TOAST */
+    .toast-wrap { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; width: min(calc(100% - 24px), 560px); }
+    .toast { background: #212529; color: #fff; padding: 13px 18px; border-radius: 20px; font-size: 14px; font-weight: 600; white-space: normal; animation: toastIn .3s ease; box-shadow: 0 8px 18px rgba(0,0,0,.18); }
+    .toast.success { background: var(--green); }
+    .toast.error { background: #dc3545; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .spinner-inline { display: inline-block; width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 8px; }
+
+    @media (hover: hover) {
+      .btn:hover,
+      .quick-btn:hover,
+      .logout-btn:hover,
+      .nav-item:hover {
+        transform: translateY(-2px);
+      }
+    }
+
+    @media (max-width: 520px) {
+      .profile-hero,
+      .profile-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .profile-val {
+        text-align: left;
+        width: 100%;
+      }
+
+      .support-links {
+        grid-template-columns: 1fr;
+      }
+
+      .quick-label {
+        max-width: none;
+      }
+
+      .rule-head,
+      .header-top {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    @media (min-width: 760px) {
+      #screen-login {
+        padding: 32px;
+      }
+
+      .login-shell {
+        grid-template-columns: minmax(320px, 1.1fr) minmax(380px, 480px);
+      }
+
+      .login-brand-panel {
+        align-items: flex-start;
+        text-align: left;
+      }
+
+      .login-brand-copy {
+        justify-items: start;
+      }
+
+      .login-subtitle {
+        text-align: left;
+      }
+
+      .login-glance {
+        max-width: none;
+      }
+
+      .content {
+        padding-left: 24px;
+        padding-right: 24px;
+      }
+
+      .quick-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .stats-row,
+      .rules-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .profile-card,
+      .tx-list,
+      .fuel-list,
+      .qr-panel {
+        border-radius: 30px;
+      }
+    }
+
+    @media (min-width: 1040px) {
+      .app-shell {
+        padding-bottom: 16px;
+      }
+
+      .app-header {
+        padding-bottom: 128px;
+      }
+
+      .balance-card {
+        max-width: 520px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ========== LOGIN SCREEN ========== -->
+<div id="screen-login" class="screen active">
+  <div class="login-shell">
+    <div class="login-brand-panel">
+      <div class="login-logo">
+        <svg fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        </svg>
+      </div>
+      <div class="login-kicker"><span class="login-kicker-dot"></span>AZS Bonus</div>
+      <div class="login-brand-copy">
+        <div class="login-title" id="mLoginTitle">АЗС Бонус</div>
+        <div class="login-subtitle" id="mLoginSubtitle">Бонусная программа для клиентов</div>
+      </div>
+      <div class="login-glance" aria-hidden="true">
+        <div class="login-glance-card">
+          <span class="login-glance-icon">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z" />
+            </svg>
+          </span>
+          <span class="login-glance-label">QR</span>
+        </div>
+        <div class="login-glance-card">
+          <span class="login-glance-icon">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </span>
+          <span class="login-glance-label">Bonus</span>
+        </div>
+        <div class="login-glance-card">
+          <span class="login-glance-icon">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </span>
+          <span class="login-glance-label">24/7</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="login-card">
+      <div class="login-card-inner">
+      <div class="login-card-top">
+        <div class="login-card-top-icon" aria-hidden="true">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5 9 6.343 9 8s1.343 3 3 3zm0 0c-2.761 0-5 2.239-5 5v1h10v-1c0-2.761-2.239-5-5-5z" />
+          </svg>
+        </div>
+        <div class="login-card-top-line"></div>
+      </div>
+      <!-- Шаг 1: телефон -->
+      <div id="step-phone" class="login-step">
+        <h2 id="mPhoneStepTitle">Вход по номеру телефона</h2>
+        <div id="err-phone" class="error-msg"></div>
+        <div class="form-group">
+          <label id="mPhoneLabel">Номер телефона</label>
+          <input id="inp-phone" class="form-control" type="tel" placeholder="+7 (999) 123-45-67" inputmode="tel">
+        </div>
+        <div class="auth-actions">
+          <button class="btn btn-primary" id="btn-send-code" type="button">Получить код</button>
+          <button class="btn btn-outline" id="btn-show-password" type="button">Войти по паролю</button>
+        </div>
+        <p class="step-hint" id="mPhoneHint">Первый код можно получить здесь. Повторный код выдает только кассир</p>
+      </div>
+
+      <div id="step-password" class="login-step" style="display:none">
+        <h2 id="mPasswordStepTitle">Вход по паролю</h2>
+        <div id="err-password" class="error-msg"></div>
+        <div class="step-summary"><span id="mAuthPhoneSummary">Вход для номера</span>: <strong id="auth-phone-password">—</strong></div>
+        <div class="form-group">
+          <label id="mPasswordLabel">Пароль</label>
+          <input id="inp-password" class="form-control" type="password" placeholder="Введите пароль" autocomplete="current-password">
+        </div>
+        <div class="auth-actions">
+          <button class="btn btn-primary" id="btn-login-password" type="button">Войти по паролю</button>
+          <button class="btn btn-outline" id="btn-password-back" type="button">← Назад</button>
+        </div>
+        <div class="auth-links">
+          <button class="auth-text-btn" id="btn-open-reset" type="button">Забыли пароль?</button>
+        </div>
+      </div>
+
+      <!-- Шаг 2: код -->
+      <div id="step-code" class="login-step" style="display:none">
+        <h2 id="mCodeStepTitle">Введите одноразовый код</h2>
+        <div id="err-code" class="error-msg"></div>
+        <div class="step-summary"><span id="mAuthPhoneSummaryCode">Код для входа нужен для номера</span>: <strong id="auth-phone-code">—</strong></div>
+        <div class="form-group">
+          <label id="mCodeLabel">Код подтверждения</label>
+          <input id="inp-code" class="form-control" type="text" placeholder="0000" inputmode="numeric" maxlength="4" style="text-align:center;font-size:24px;letter-spacing:8px">
+        </div>
+        <div class="auth-actions">
+          <button class="btn btn-primary" id="btn-verify" type="button">Войти</button>
+          <button class="btn btn-outline" id="btn-back" type="button">← Изменить номер</button>
+        </div>
+        <p class="step-hint" id="stub-hint"></p>
+      </div>
+
+      <div id="step-set-password" class="login-step" style="display:none">
+        <h2 id="mSetPasswordStepTitle">Создайте пароль</h2>
+        <div id="err-set-password" class="error-msg"></div>
+        <div class="step-summary"><span id="mAuthPhoneSummarySet">Подтвержден номер</span>: <strong id="auth-phone-set-password">—</strong></div>
+        <div class="form-group">
+          <label id="mNewPasswordLabel">Новый пароль</label>
+          <input id="inp-new-password" class="form-control" type="password" placeholder="Минимум 6 символов" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label id="mConfirmPasswordLabel">Повторите пароль</label>
+          <input id="inp-confirm-password" class="form-control" type="password" placeholder="Повторите пароль" autocomplete="new-password">
+        </div>
+        <div class="auth-actions">
+          <button class="btn btn-primary" id="btn-save-password" type="button">Сохранить пароль</button>
+          <button class="btn btn-outline" id="btn-set-password-later" type="button">Позже</button>
+        </div>
+        <p class="step-hint" id="mSetPasswordHint">Сохраните пароль один раз, чтобы потом входить без кода.</p>
+      </div>
+
+      <div id="step-reset" class="login-step" style="display:none">
+        <h2 id="mResetPasswordStepTitle">Сброс пароля</h2>
+        <div id="err-reset" class="error-msg"></div>
+        <div class="step-summary"><span id="mAuthPhoneSummaryReset">Код для сброса нужен для номера</span>: <strong id="auth-phone-reset">—</strong></div>
+        <div class="form-group">
+          <label id="mResetCodeLabel">Одноразовый код</label>
+          <input id="inp-reset-code" class="form-control" type="text" placeholder="0000" inputmode="numeric" maxlength="4" style="text-align:center;font-size:24px;letter-spacing:8px">
+        </div>
+        <div class="form-group">
+          <label id="mResetPasswordLabel">Новый пароль</label>
+          <input id="inp-reset-password" class="form-control" type="password" placeholder="Минимум 6 символов" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label id="mResetPasswordConfirmLabel">Повторите пароль</label>
+          <input id="inp-reset-password-confirm" class="form-control" type="password" placeholder="Повторите пароль" autocomplete="new-password">
+        </div>
+        <div class="auth-actions">
+          <button class="btn btn-primary" id="btn-reset-password" type="button">Сохранить новый пароль</button>
+          <button class="btn btn-outline" id="btn-reset-back" type="button">← Назад ко входу</button>
+        </div>
+        <p class="step-hint" id="reset-stub-hint"></p>
+      </div>
+      <div class="login-legal">
+        Продолжая вход, вы соглашаетесь с обработкой номера телефона по <a href="/privacy" target="_blank" rel="noopener">политике конфиденциальности</a>.
+      </div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- ========== APP SCREEN ========== -->
+<div id="screen-app" class="screen">
+  <div class="app-shell">
+    <div class="app-header">
+      <div class="app-header-inner">
+        <div class="header-top">
+          <div>
+            <div class="header-greeting" id="mHeaderGreeting">Добро пожаловать,</div>
+            <div class="header-name" id="hdr-name">Клиент</div>
+          </div>
+          <div class="header-actions">
+            <button class="bell-btn" type="button" onclick="switchTab('news')" id="newsBellBtn" aria-label="Новости" title="Новости">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              <span class="bell-badge badge-hidden" id="newsBellBadge">0</span>
+            </button>
+            <button class="logout-btn" onclick="logout()" id="mLogoutBtn">Выйти</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Balance card -->
+    <div class="balance-card">
+      <div class="balance-icon">
+        <svg fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="balance-label" id="mBalanceLabel">Баланс бонусов</div>
+        <div><span class="balance-amount" id="hdr-balance">0</span><span class="balance-unit">бонусов</span></div>
+      </div>
+    </div>
+
+    <!-- Tab pages -->
+    <div class="app-scroll">
+
+    <!-- HOME -->
+    <div id="tab-home" class="tab-page active content">
+      <div class="section-title" id="mQuickTitle">Быстрые действия</div>
+      <div class="quick-grid">
+        <button class="quick-btn" onclick="switchTab('qr')">
+          <div class="quick-icon qi-qr">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+            </svg>
+          </div>
+          <div class="quick-label" id="mQuickQr">Мой QR-код</div>
+        </button>
+        <button class="quick-btn" onclick="switchTab('history')">
+          <div class="quick-icon qi-history">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+          </div>
+          <div class="quick-label" id="mQuickHistory">История</div>
+        </button>
+        <button class="quick-btn" onclick="switchTab('rules')">
+          <div class="quick-icon qi-rules">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+            </svg>
+          </div>
+          <div class="quick-label" id="mQuickRules">Акции</div>
+        </button>
+        <button class="quick-btn" onclick="switchTab('profile')">
+          <div class="quick-icon qi-profile">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+          </div>
+          <div class="quick-label" id="mQuickProfile">Профиль</div>
+        </button>
+      </div>
+
+      <div class="section-title" id="mStatsTitle">Статистика</div>
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value stat-blue" id="stat-balance">0</div>
+          <div class="stat-label" id="mStatBalanceLabel">Бонусов накоплено</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value stat-green" id="stat-spent">0 ₽</div>
+          <div class="stat-label" id="mStatSpentLabel">Потрачено всего</div>
+        </div>
+      </div>
+
+      <div id="expiry-notice" class="expiry-notice" style="display:none;">
+        <div class="expiry-notice-title" id="mExpiryNoticeTitle">Ближайшее сгорание бонусов</div>
+        <div class="expiry-notice-main" id="expiry-notice-main">—</div>
+        <div class="expiry-notice-sub" id="expiry-notice-sub">—</div>
+      </div>
+
+      <div class="section-title" id="mFuelTitle">Цены на топливо</div>
+      <div id="fuel-container">
+        <div class="qr-loader" style="margin:30px auto;"></div>
+      </div>
+    </div>
+
+    <!-- QR -->
+    <div id="tab-qr" class="tab-page content">
+      <div class="section-title" id="mQrTitle">Мой QR-код</div>
+      <div class="qr-panel">
+        <div class="qr-visual">
+          <div id="qr-loading"><div class="qr-loader"></div></div>
+          <img id="qr-img" src="" style="display:none">
+        </div>
+        <div class="qr-phone" id="qr-phone"></div>
+        <div class="qr-hint" id="mQrHint">Покажите кассиру для начисления бонусов</div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div id="tab-history" class="tab-page content">
+      <div class="section-title" id="mHistoryTitle">История операций</div>
+      <div id="tx-container">
+        <div class="qr-loader" style="margin:40px auto;"></div>
+      </div>
+    </div>
+
+    <!-- NEWS -->
+    <div id="tab-news" class="tab-page content">
+      <div class="section-title" id="mNewsTitle">Новости</div>
+      <div id="news-container">
+        <div class="qr-loader" style="margin:40px auto;"></div>
+      </div>
+    </div>
+
+    <!-- RULES -->
+    <div id="tab-rules" class="tab-page content">
+      <div class="section-title" id="mRulesTitle">Акции и правила начисления</div>
+      <div id="rules-container">
+        <div class="qr-loader" style="margin:40px auto;"></div>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div id="tab-profile" class="tab-page content">
+      <div class="section-title" id="mProfileTitle">Мой профиль</div>
+      <div class="profile-card" id="profile-data">
+        <div class="qr-loader" style="margin:20px auto;"></div>
+      </div>
+      <!-- Edit form -->
+      <div id="profile-edit-form" style="display:none;margin-top:16px;">
+        <div class="section-title" style="margin-bottom:12px;" id="mProfileEditTitle">Изменить данные</div>
+        <div class="profile-card profile-edit-grid" style="padding:16px;">
+          <div>
+            <label style="font-size:12px;color:var(--muted);font-weight:500;display:block;margin-bottom:6px;" id="mProfileEditLastNameLabel">Фамилия</label>
+            <input id="edit-last-name" class="profile-edit-input" type="text" placeholder="Введите фамилию">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--muted);font-weight:500;display:block;margin-bottom:6px;" id="mProfileEditFirstNameLabel">Имя</label>
+            <input id="edit-first-name" class="profile-edit-input" type="text" placeholder="Введите имя">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--muted);font-weight:500;display:block;margin-bottom:6px;" id="mProfileEditPatronymicLabel">Отчество</label>
+            <input id="edit-patronymic" class="profile-edit-input" type="text" placeholder="Введите отчество">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--muted);font-weight:500;display:block;margin-bottom:6px;" id="mProfileEditBirthLabel">Дата рождения</label>
+            <input id="edit-birth" class="profile-edit-input" type="date">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--muted);font-weight:500;display:block;margin-bottom:10px;" id="mProfileEditPhotoLabel">Фотография</label>
+            <div class="profile-photo-block">
+              <div id="edit-photo-preview" class="profile-photo-preview"></div>
+              <div class="profile-photo-actions">
+                <input id="edit-photo" class="profile-photo-input" type="file" accept="image/*">
+                <button id="btn-pick-photo" type="button" class="profile-photo-pick" onclick="document.getElementById('edit-photo').click()">Добавить фото</button>
+                <div id="profile-photo-hint" class="profile-photo-meta">Сожмем и подгоним изображение автоматически</div>
+                <button id="btn-remove-photo" type="button" class="profile-photo-remove" onclick="clearProfilePhoto()">Удалить фото</button>
+              </div>
+            </div>
+          </div>
+          <button id="btn-save-profile" onclick="saveProfile()" style="padding:14px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;">
+            Сохранить
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab pages -->
+
+  <div class="support-footer">
+    <div class="support-card">
+      <div class="support-head">
+        <div class="support-copy">
+          <div class="support-title" id="mSupportTitle">Техподдержка</div>
+          <div class="support-text" id="mSupportText">Короткая помощь и юридическая информация для мобильного приложения.</div>
+        </div>
+        <div class="support-badge">24/7</div>
+      </div>
+      <div class="support-links">
+        <a class="support-chip" href="mailto:remix_993@mail.ru">
+          <span class="support-chip-icon" aria-hidden="true">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16v12H4z"/><path stroke-linecap="round" stroke-linejoin="round" d="m4 7 8 6 8-6"/></svg>
+          </span>
+          <span class="support-chip-copy">
+            <span class="support-chip-label" id="mSupportEmailLabel">Почта</span>
+            <span class="support-chip-value">remix_993@mail.ru</span>
+          </span>
+        </a>
+        <a class="support-chip support-chip-policy" href="/privacy" target="_blank" rel="noopener">
+          <span class="support-chip-icon" aria-hidden="true">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l7 4v5c0 5-3.5 7.5-7 9-3.5-1.5-7-4-7-9V7l7-4z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9.5 12.5 11 14l3.5-4"/></svg>
+          </span>
+          <span class="support-chip-copy">
+            <span class="support-chip-label" id="mPrivacyPolicyLabel">Политика</span>
+            <span class="support-chip-value" id="mPrivacyPolicyValue">Конфиденциальность</span>
+          </span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="home" onclick="switchTab('home')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      <div class="nav-dot"></div>
+      <span id="mNavHome">Главная</span>
+    </button>
+    <button class="nav-item" data-tab="qr" onclick="switchTab('qr')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+      <div class="nav-dot"></div>
+      <span id="mNavQr">QR-код</span>
+    </button>
+    <button class="nav-item" data-tab="history" onclick="switchTab('history')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      <div class="nav-dot"></div>
+      <span id="mNavHistory">История</span>
+    </button>
+    <button class="nav-item" data-tab="news" onclick="switchTab('news')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+      <span class="nav-badge badge-hidden" id="newsNavBadge">0</span>
+      <div class="nav-dot"></div>
+      <span id="mNavNews">Новости</span>
+    </button>
+    <button class="nav-item" data-tab="profile" onclick="switchTab('profile')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+      <div class="nav-dot"></div>
+      <span id="mNavProfile">Профиль</span>
+    </button>
+  </nav>
+  </div>
+</div>
+
+<script src="/static/offline.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js?v=20260429-3').then((registration) => {
+        registration.update();
+        if (registration.waiting) {
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+        registration.addEventListener('updatefound', () => {
+          const installingWorker = registration.installing;
+          if (!installingWorker) return;
+          installingWorker.addEventListener('statechange', () => {
+            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              window.location.reload();
+            }
+          });
+        });
+      }).catch((error) => {
+        console.error('Service worker registration failed', error);
+      });
+    });
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+  }
+
+  const MOBILE_TEXTS = {
+    ru: {
+      brand: 'АЗС Бонус', subtitle: 'Бонусная программа для клиентов', phoneStep: 'Вход по номеру телефона', phoneLabel: 'Номер телефона', sendCode: 'Получить код', sending: 'Проверяем номер...', phoneHint: 'Первый код можно получить здесь. Повторный код выдает только кассир',
+      codeStep: 'Введите одноразовый код', codeLabel: 'Код подтверждения', login: 'Войти', back: '← Изменить номер', verify: 'Проверяем...', greeting: 'Добро пожаловать,', client: 'Клиент', logout: 'Выйти',
+      passwordMode: 'Войти по паролю', passwordStep: 'Вход по паролю', passwordLabel: 'Пароль', passwordPlaceholder: 'Введите пароль', passwordLogin: 'Войти по паролю', passwordForgot: 'Забыли пароль?', passwordResetStep: 'Сброс пароля', passwordResetCodeLabel: 'Одноразовый код', passwordResetAction: 'Сохранить новый пароль', passwordResetHint: 'Попросите у кассира одноразовый код для сброса пароля',
+      setPasswordStep: 'Создайте пароль', setPasswordHint: 'Сохраните пароль один раз, чтобы потом входить без кода.', newPasswordLabel: 'Новый пароль', newPasswordPlaceholder: 'Минимум 6 символов', confirmPasswordLabel: 'Повторите пароль', confirmPasswordPlaceholder: 'Повторите пароль', savePassword: 'Сохранить пароль', savePasswordLoading: 'Сохраняем...', continueLater: 'Позже', authPhoneSummary: 'Вход для номера', authPhoneCodeSummary: 'Код для входа нужен для номера', authPhoneSetSummary: 'Подтвержден номер', authPhoneResetSummary: 'Код для сброса нужен для номера',
+      passwordRequired: 'Сначала подтвердите номер одноразовым кодом и создайте пароль', passwordMismatch: 'Пароли не совпадают', passwordSaved: 'Пароль сохранен', passwordTooShort: 'Пароль должен быть не короче 6 символов',
+      balanceLabel: 'Баланс бонусов', bonusesUnit: 'бонусов', quickTitle: 'Быстрые действия', quickQr: 'Мой QR-код', quickHistory: 'История', quickRules: 'Акции', quickProfile: 'Профиль', statsTitle: 'Статистика',
+      statBalance: 'Бонусов накоплено', statSpent: 'Потрачено всего', fuelTitle: 'Цены на топливо', qrTitle: 'Мой QR-код', qrHint: 'Покажите кассиру для начисления бонусов', historyTitle: 'История операций', expiryNoticeTitle: 'Ближайшее сгорание бонусов', expiryNoticeEmpty: 'Активных бонусов со сроком сгорания сейчас нет', expiryNoticeText: 'До {date} может сгореть {amount} бонусов',
+      newsTitle: 'Новости', newsEmpty: 'Пока нет новостей от администратора', newsPublished: 'Опубликовано', newsLoadError: 'Не удалось загрузить новости',
+      rulesTitle: 'Акции и правила начисления', profileTitle: 'Мой профиль', profileEditTitle: 'Изменить данные', profileEditFirstName: 'Имя', profileEditLastName: 'Фамилия', profileEditPatronymic: 'Отчество', profileEditBirth: 'Дата рождения', profileEditPhoto: 'Фотография', profilePhotoPick: 'Добавить фото', profilePhotoHint: 'Сожмем и подгоним изображение автоматически', profilePhotoRemove: 'Удалить фото', profilePhotoInvalid: 'Выберите изображение', profilePhotoTooLarge: 'Исходный файл должен быть не больше 12 МБ', profileSave: 'Сохранить', profileSaving: 'Сохранение...',
+      navHome: 'Главная', navQr: 'QR-код', navHistory: 'История', navNews: 'Новости', navProfile: 'Профиль', invalidPhone: 'Введите корректный номер телефона', sendError: 'Ошибка отправки', enterCode: 'Введите код', invalidCode: 'Неверный код',
+      testMode: 'Код подтверждения: <b>{code}</b>', cashierCodeHint: 'Попросите кассира выдать новый одноразовый код и введите его ниже', selfCodeHint: 'Сохраните этот код. Повторно самостоятельно получить его нельзя', fuelLoadError: 'Не удалось загрузить цены', fuelEmpty: 'Цены пока не заданы', updated: 'обновлено:', phone: 'Телефон', name: 'Полное имя', birthDate: 'Дата рождения', bonusBalance: 'Бонусный баланс', totalSpent: 'Потрачено всего', regDate: 'Дата регистрации', editData: 'Изменить данные', supportTitle: 'Помощь и безопасность', supportText: 'Связь с поддержкой и официальная политика конфиденциальности приложения.', supportContact: 'Контакт', supportEmail: 'Почта', privacyPolicyLabel: 'Политика', privacyPolicyValue: 'Конфиденциальность',
+      noName: '—', noDate: '—', txEmpty: 'Операций пока нет', accrual: 'Начисление', redeem: 'Списание', expire: 'Сгорание', cancellation: 'Отмена чека', bonusShort: 'бон.', rulesEmpty: 'Акций пока нет', locFuel: 'Топливо', locBase: 'Магазин', allLevels: 'Все уровни', levelBronze: 'Бронза', levelSilver: 'Серебро', levelGold: 'Золото', typePercent: 'процент', typeLiter: 'бонусов/л', typeFixed: 'фиксировано', from: 'с', until: 'до', loadSaveError: 'Ошибка сохранения', language: 'Язык интерфейса', phonePlaceholder: '+7 (999) 123-45-67 / +992 90 123 45 67', codePlaceholder: '0000', profileEditFirstNamePlaceholder: 'Введите имя', profileEditLastNamePlaceholder: 'Введите фамилию', profileEditPatronymicPlaceholder: 'Введите отчество', profileExpiryTitle: 'Сроки сгорания бонусов', profileExpiryEmpty: 'Активных бонусов со сроком сгорания нет', profileExpiryIssued: 'Выдано', profileSummaryTitle: 'Итоги по карте', profileSummaryAccrued: 'Всего начислено', profileSummaryRedeemed: 'Всего списано', profileSummaryCancelled: 'Отмен чеков', historyReason: 'Причина', historyReceipt: 'Чек', historyCancelReceipt: 'Чек отмены', historyNoDetails: 'Без дополнительных данных', offlineCachedData: 'Связь слабая. Показаны последние сохраненные данные', offlineBackOnline: 'Связь восстановлена. Обновляем данные', offlineNoCache: 'Связь слабая, сохраненных данных пока нет'
+    },
+    en: {
+      brand: 'AZS Bonus', subtitle: 'Bonus program for clients', phoneStep: 'Login by phone number', phoneLabel: 'Phone number', sendCode: 'Get code', sending: 'Checking number...', phoneHint: 'You can get the first code here. Any next code must be issued by the cashier',
+      codeStep: 'Enter the one-time code', codeLabel: 'Verification code', login: 'Login', back: '← Change number', verify: 'Verifying...', greeting: 'Welcome,', client: 'Client', logout: 'Logout',
+      passwordMode: 'Login with password', passwordStep: 'Password login', passwordLabel: 'Password', passwordPlaceholder: 'Enter your password', passwordLogin: 'Login with password', passwordForgot: 'Forgot password?', passwordResetStep: 'Reset password', passwordResetCodeLabel: 'One-time code', passwordResetAction: 'Save new password', passwordResetHint: 'Ask the cashier for a one-time code to reset your password',
+      setPasswordStep: 'Create a password', setPasswordHint: 'Save a password once to log in without a code next time.', newPasswordLabel: 'New password', newPasswordPlaceholder: 'At least 6 characters', confirmPasswordLabel: 'Repeat password', confirmPasswordPlaceholder: 'Repeat password', savePassword: 'Save password', savePasswordLoading: 'Saving...', continueLater: 'Later', authPhoneSummary: 'Login for number', authPhoneCodeSummary: 'A login code is needed for', authPhoneSetSummary: 'Verified number', authPhoneResetSummary: 'A reset code is needed for',
+      passwordRequired: 'Confirm the number with a one-time code first and create a password', passwordMismatch: 'Passwords do not match', passwordSaved: 'Password saved', passwordTooShort: 'Password must be at least 6 characters',
+      balanceLabel: 'Bonus balance', bonusesUnit: 'bonuses', quickTitle: 'Quick actions', quickQr: 'My QR code', quickHistory: 'History', quickRules: 'Offers', quickProfile: 'Profile', statsTitle: 'Statistics',
+      statBalance: 'Bonuses earned', statSpent: 'Total spent', fuelTitle: 'Fuel prices', qrTitle: 'My QR code', qrHint: 'Show it to the cashier to earn bonuses', historyTitle: 'Operation history', expiryNoticeTitle: 'Nearest bonus expiry', expiryNoticeEmpty: 'There are no active bonuses with expiry now', expiryNoticeText: 'Up to {amount} bonuses may expire on {date}',
+      newsTitle: 'News', newsEmpty: 'There is no news from the administrator yet', newsPublished: 'Published', newsLoadError: 'Failed to load news',
+      rulesTitle: 'Offers and accrual rules', profileTitle: 'My profile', profileEditTitle: 'Edit data', profileEditFirstName: 'First name', profileEditLastName: 'Last name', profileEditPatronymic: 'Patronymic', profileEditBirth: 'Birth date', profileEditPhoto: 'Photo', profilePhotoPick: 'Add photo', profilePhotoHint: 'We will resize and compress it automatically', profilePhotoRemove: 'Remove photo', profilePhotoInvalid: 'Choose an image file', profilePhotoTooLarge: 'Source file must be smaller than 12 MB', profileSave: 'Save', profileSaving: 'Saving...',
+      navHome: 'Home', navQr: 'QR code', navHistory: 'History', navNews: 'News', navProfile: 'Profile', invalidPhone: 'Enter a valid phone number', sendError: 'Send error', enterCode: 'Enter the code', invalidCode: 'Invalid code',
+      testMode: 'Verification code: <b>{code}</b>', cashierCodeHint: 'Ask the cashier for a new one-time code and enter it below', selfCodeHint: 'Save this code. You cannot request it yourself again', fuelLoadError: 'Failed to load prices', fuelEmpty: 'Prices are not set yet', updated: 'updated:', phone: 'Phone', name: 'Full name', birthDate: 'Birth date', bonusBalance: 'Bonus balance', totalSpent: 'Total spent', regDate: 'Registration date', editData: 'Edit data', supportTitle: 'Help and privacy', supportText: 'Quick support access and the official privacy policy for the app.', supportContact: 'Contact', supportEmail: 'Email', privacyPolicyLabel: 'Policy', privacyPolicyValue: 'Privacy',
+      noName: '—', noDate: '—', txEmpty: 'No operations yet', accrual: 'Accrual', redeem: 'Redemption', expire: 'Expiration', cancellation: 'Receipt cancellation', bonusShort: 'bon.', rulesEmpty: 'No offers yet', locFuel: 'Fuel', locBase: 'Store', allLevels: 'All levels', levelBronze: 'Bronze', levelSilver: 'Silver', levelGold: 'Gold', typePercent: 'percent', typeLiter: 'bonuses/l', typeFixed: 'fixed', from: 'from', until: 'until', loadSaveError: 'Save error', language: 'Interface language', phonePlaceholder: '+7 (999) 123-45-67 / +992 90 123 45 67', codePlaceholder: '0000', profileEditFirstNamePlaceholder: 'Enter first name', profileEditLastNamePlaceholder: 'Enter last name', profileEditPatronymicPlaceholder: 'Enter patronymic', profileExpiryTitle: 'Bonus expiry schedule', profileExpiryEmpty: 'No active expiring bonuses', profileExpiryIssued: 'Issued', profileSummaryTitle: 'Card summary', profileSummaryAccrued: 'Total accrued', profileSummaryRedeemed: 'Total redeemed', profileSummaryCancelled: 'Receipt cancellations', historyReason: 'Reason', historyReceipt: 'Receipt', historyCancelReceipt: 'Cancellation receipt', historyNoDetails: 'No extra details', offlineCachedData: 'Connection is weak. Showing the latest saved data', offlineBackOnline: 'Connection restored. Refreshing data', offlineNoCache: 'Connection is weak and no saved data is available yet'
+    },
+    tg: {
+      brand: 'АЗС Бонус', subtitle: 'Барномаи бонусӣ барои мизоҷон', phoneStep: 'Вуруд бо рақами телефон', phoneLabel: 'Рақами телефон', sendCode: 'Гирифтани код', sending: 'Рақам санҷида истодааст...', phoneHint: 'Коди аввалро аз ҳамин ҷо гирифтан мумкин аст. Коди такрориро танҳо хазинадор медиҳад',
+      codeStep: 'Коди якдафъаинаро ворид кунед', codeLabel: 'Коди тасдиқ', login: 'Ворид шудан', back: '← Иваз кардани рақам', verify: 'Санҷида истодааст...', greeting: 'Хуш омадед,', client: 'Мизоҷ', logout: 'Баромадан',
+      passwordMode: 'Вуруд бо парол', passwordStep: 'Вуруд бо парол', passwordLabel: 'Парол', passwordPlaceholder: 'Паролро ворид кунед', passwordLogin: 'Вуруд бо парол', passwordForgot: 'Паролро фаромӯш кардед?', passwordResetStep: 'Барқарорсозии парол', passwordResetCodeLabel: 'Коди якдафъаина', passwordResetAction: 'Сабти пароли нав', passwordResetHint: 'Барои барқарорсозии парол аз хазинадор коди якдафъаина пурсед',
+      setPasswordStep: 'Парол созед', setPasswordHint: 'Паролро як бор нигоҳ доред, то баъд бе код ворид шавед.', newPasswordLabel: 'Пароли нав', newPasswordPlaceholder: 'Камаш 6 рамз', confirmPasswordLabel: 'Паролро такрор кунед', confirmPasswordPlaceholder: 'Паролро такрор кунед', savePassword: 'Сабти парол', savePasswordLoading: 'Сабт шуда истодааст...', continueLater: 'Баъдтар', authPhoneSummary: 'Вуруд барои рақам', authPhoneCodeSummary: 'Коди воридшавӣ барои ин рақам лозим аст', authPhoneSetSummary: 'Рақам тасдиқ шуд', authPhoneResetSummary: 'Коди барқарорсозӣ барои ин рақам лозим аст',
+      passwordRequired: 'Аввал рақамро бо коди якдафъаина тасдиқ кунед ва парол созед', passwordMismatch: 'Паролҳо мувофиқат намекунанд', passwordSaved: 'Парол сабт шуд', passwordTooShort: 'Парол бояд камаш 6 рамз дошта бошад',
+      balanceLabel: 'Бақияи бонусҳо', bonusesUnit: 'бонус', quickTitle: 'Амалҳои зуд', quickQr: 'QR-коди ман', quickHistory: 'Таърих', quickRules: 'Аксияҳо', quickProfile: 'Профил', statsTitle: 'Омор',
+      statBalance: 'Бонусҳои ҷамъшуда', statSpent: 'Ҳамагӣ харҷ шуд', fuelTitle: 'Нархи сӯзишворӣ', qrTitle: 'QR-коди ман', qrHint: 'Ба хазинадор нишон диҳед, то бонус гиред', historyTitle: 'Таърихи амалиёт', expiryNoticeTitle: 'Наздиктарин сӯхтани бонусҳо', expiryNoticeEmpty: 'Ҳоло бонусҳои фаъол бо муҳлати сӯхтан нестанд', expiryNoticeText: 'То {date} метавонад {amount} бонус сӯзад',
+      newsTitle: 'Хабарҳо', newsEmpty: 'Ҳоло аз ҷониби мудир хабар нест', newsPublished: 'Нашр шуд', newsLoadError: 'Боркунии хабарҳо иҷро нашуд',
+      rulesTitle: 'Аксияҳо ва қоидаҳои ҳисобкунӣ', profileTitle: 'Профили ман', profileEditTitle: 'Тағйири маълумот', profileEditFirstName: 'Ном', profileEditLastName: 'Насаб', profileEditPatronymic: 'Номи падар', profileEditBirth: 'Санаи таваллуд', profileEditPhoto: 'Акс', profilePhotoPick: 'Иловаи акс', profilePhotoHint: 'Акс худкор хурд ва фишурда мешавад', profilePhotoRemove: 'Нест кардани акс', profilePhotoInvalid: 'Файли тасвирро интихоб кунед', profilePhotoTooLarge: 'Файли аслӣ бояд аз 12 МБ калон набошад', profileSave: 'Сабт кардан', profileSaving: 'Дар ҳоли сабт...',
+      navHome: 'Асосӣ', navQr: 'QR-код', navHistory: 'Таърих', navNews: 'Хабарҳо', navProfile: 'Профил', invalidPhone: 'Рақами дурустро ворид кунед', sendError: 'Хатои фиристодан', enterCode: 'Кодро ворид кунед', invalidCode: 'Код нодуруст аст',
+      testMode: 'Коди тасдиқ: <b>{code}</b>', cashierCodeHint: 'Аз хазинадор коди нави якдафъаина пурсед ва онро дар поён ворид кунед', selfCodeHint: 'Ин кодро нигоҳ доред. Боз худатон онро гирифта наметавонед', fuelLoadError: 'Боркунии нархҳо иҷро нашуд', fuelEmpty: 'Ҳоло нархҳо муайян нашудаанд', updated: 'нав шуд:', phone: 'Телефон', name: 'Номи пурра', birthDate: 'Санаи таваллуд', bonusBalance: 'Бақияи бонус', totalSpent: 'Ҳамагӣ харҷ шуд', regDate: 'Санаи сабт', editData: 'Тағйири маълумот', supportTitle: 'Кумак ва амният', supportText: 'Дастрасии зуд ба дастгирӣ ва сиёсати расмии махфият барои барнома.', supportContact: 'Тамос', supportEmail: 'Почта', privacyPolicyLabel: 'Сиёсат', privacyPolicyValue: 'Махфият',
+      noName: '—', noDate: '—', txEmpty: 'Ҳоло амалиёт нест', accrual: 'Ҳисобкунӣ', redeem: 'Ҳисоббарорӣ', expire: 'Сӯхтан', cancellation: 'Бекоркунии чек', bonusShort: 'бон.', rulesEmpty: 'Ҳоло аксия нест', locFuel: 'Сӯзишворӣ', locBase: 'Мағоза', allLevels: 'Ҳама сатҳҳо', levelBronze: 'Биринҷӣ', levelSilver: 'Нуқра', levelGold: 'Тилло', typePercent: 'фоиз', typeLiter: 'бонус/л', typeFixed: 'собит', from: 'аз', until: 'то', loadSaveError: 'Хатои сабт', language: 'Забони интерфейс', phonePlaceholder: '+7 (999) 123-45-67 / +992 90 123 45 67', codePlaceholder: '0000', profileEditFirstNamePlaceholder: 'Номро ворид кунед', profileEditLastNamePlaceholder: 'Насабро ворид кунед', profileEditPatronymicPlaceholder: 'Номи падарро ворид кунед', profileExpiryTitle: 'Муҳлати сӯхтани бонусҳо', profileExpiryEmpty: 'Бонусҳои фаъол барои сӯхтан нестанд', profileExpiryIssued: 'Дода шуд', profileSummaryTitle: 'Хулосаи корт', profileSummaryAccrued: 'Ҳамагӣ ҳисоб шуд', profileSummaryRedeemed: 'Ҳамагӣ ҳисоббарорӣ шуд', profileSummaryCancelled: 'Бекоркунии чекҳо', historyReason: 'Сабаб', historyReceipt: 'Чек', historyCancelReceipt: 'Чеки бекоркунӣ', historyNoDetails: 'Маълумоти иловагӣ нест', offlineCachedData: 'Алоқа суст аст. Маълумоти охирини нигоҳдошташуда нишон дода мешавад', offlineBackOnline: 'Алоқа барқарор шуд. Маълумот нав мешавад', offlineNoCache: 'Алоқа суст аст ва ҳоло маълумоти нигоҳдошташуда нест'
+    }
+  };
+
+  const MOBILE_CURRENCIES = {
+    RUB: { symbol: '₽', position: 'after' },
+    USD: { symbol: '$', position: 'before' },
+    TJS: { symbol: 'сомони', position: 'after' },
+  };
+
+  const LS_MOBILE_LANGUAGE = 'azs_mobile_ui_language';
+  const LS_MOBILE_IDENTITY = 'azs_mobile_identity';
+  const LS_MOBILE_NEWS_SEEN = 'azs_mobile_news_seen';
+  const LEGACY_MOBILE_LANGUAGE = 'azs_ui_language';
+
+  function normalizeMobilePreferencePart(value) {
+    return String(value || '').trim().toLowerCase().replace(/[^a-z0-9:_-]+/g, '_');
+  }
+  function getStoredMobileIdentity() {
+    return normalizeMobilePreferencePart(localStorage.getItem(LS_MOBILE_IDENTITY)) || 'guest';
+  }
+  function getMobilePreferenceKey(baseKey, scope = getStoredMobileIdentity()) {
+    return `${baseKey}:${scope}`;
+  }
+  function readMobilePreference(baseKey, fallback = null) {
+    const scope = getStoredMobileIdentity();
+    return localStorage.getItem(getMobilePreferenceKey(baseKey, scope))
+      || (scope === 'guest' ? localStorage.getItem(LEGACY_MOBILE_LANGUAGE) : null)
+      || fallback;
+  }
+  function writeMobilePreference(baseKey, value, scope = getStoredMobileIdentity()) {
+    localStorage.setItem(getMobilePreferenceKey(baseKey, scope), value);
+  }
+  function syncMobileLanguageControls() {
+    const current = mobileLang();
+    ['mobile-language-profile'].forEach((id) => {
+      const element = document.getElementById(id);
+      if (element) element.value = current;
+    });
+  }
+  function setMobileIdentity(identity) {
+    const normalizedIdentity = normalizeMobilePreferencePart(identity) || 'guest';
+    const previousLanguage = mobileLang();
+    localStorage.setItem(LS_MOBILE_IDENTITY, normalizedIdentity);
+    if (!localStorage.getItem(getMobilePreferenceKey(LS_MOBILE_LANGUAGE, normalizedIdentity))) {
+      writeMobilePreference(LS_MOBILE_LANGUAGE, previousLanguage || 'ru', normalizedIdentity);
+    }
+    syncMobileLanguageControls();
+  }
+  function mobileLanguageOptionsMarkup(selected = mobileLang()) {
+    return [
+      ['ru', 'Русский'],
+      ['en', 'English'],
+      ['tg', 'Тоҷикӣ'],
+    ].map(([value, label]) => `<option value="${value}"${value === selected ? ' selected' : ''}>${label}</option>`).join('');
+  }
+  function handleMobileLanguageChange(nextLanguage) {
+    const language = ['ru', 'en', 'tg'].includes(nextLanguage) ? nextLanguage : 'ru';
+    writeMobilePreference(LS_MOBILE_LANGUAGE, language);
+    syncMobileLanguageControls();
+    applyMobileLocale();
+    if (profile) {
+      document.getElementById('hdr-balance').textContent = mobileNumber(profile.bonus_balance, 0);
+      document.getElementById('stat-balance').textContent = mobileNumber(profile.bonus_balance, 0);
+      document.getElementById('stat-spent').textContent = mobileMoney(profile.total_spent || 0, 0);
+      renderProfile(profile);
+    }
+    if (document.getElementById('tab-home')?.classList.contains('active')) loadFuelPrices();
+    if (document.getElementById('tab-history')?.classList.contains('active')) loadTx();
+    if (newsItems.length) renderNews();
+    if (document.getElementById('tab-rules')?.classList.contains('active')) {
+      rulesLoaded = false;
+      loadRules();
+    }
+  }
+
+  const MOBILE_TIMEZONE = 'Asia/Dushanbe';
+
+  function mobileLang() { return readMobilePreference(LS_MOBILE_LANGUAGE, 'ru'); }
+  function mobileCurrency() { return localStorage.getItem('azs_ui_currency') || 'RUB'; }
+  function mobileLocale() { return ({ ru: 'ru-RU', en: 'en-US', tg: 'tg-TJ' })[mobileLang()] || 'ru-RU'; }
+  function mt(key, replacements = {}) {
+    let value = (MOBILE_TEXTS[mobileLang()] && MOBILE_TEXTS[mobileLang()][key]) || MOBILE_TEXTS.ru[key] || key;
+    for (const [name, replacement] of Object.entries(replacements)) value = value.replaceAll(`{${name}}`, replacement);
+    return value;
+  }
+  function mobileNumber(value, digits = 0) {
+    const num = typeof value === 'number' ? value : parseFloat(value || 0);
+    return num.toLocaleString(mobileLocale(), { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  }
+  function mobileMoney(value, digits = 0) {
+    const currency = MOBILE_CURRENCIES[mobileCurrency()] || MOBILE_CURRENCIES.RUB;
+    const formatted = mobileNumber(value, digits);
+    return currency.position === 'before' ? `${currency.symbol}${formatted}` : `${formatted} ${currency.symbol}`;
+  }
+  function mobilePrice(value, digits = 2) { return `${mobileMoney(value, digits)}/л`; }
+  function mobileDateTime(value, options = {}) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return date.toLocaleString(mobileLocale(), { timeZone: MOBILE_TIMEZONE, ...options });
+  }
+  function applyMobileLocale() {
+    document.documentElement.lang = mobileLang();
+    document.title = mt('brand');
+    syncMobileLanguageControls();
+    document.getElementById('mLoginTitle').textContent = mt('brand');
+    document.getElementById('mLoginSubtitle').textContent = mt('subtitle');
+    document.getElementById('mPhoneStepTitle').textContent = mt('phoneStep');
+    document.getElementById('mPhoneLabel').textContent = mt('phoneLabel');
+    document.getElementById('inp-phone').placeholder = mt('phonePlaceholder');
+    document.getElementById('btn-send-code').textContent = mt('sendCode');
+    document.getElementById('btn-show-password').textContent = mt('passwordMode');
+    document.getElementById('mPhoneHint').textContent = mt('phoneHint');
+    document.getElementById('mPasswordStepTitle').textContent = mt('passwordStep');
+    document.getElementById('mPasswordLabel').textContent = mt('passwordLabel');
+    document.getElementById('inp-password').placeholder = mt('passwordPlaceholder');
+    document.getElementById('btn-login-password').textContent = mt('passwordLogin');
+    document.getElementById('btn-password-back').textContent = mt('back');
+    document.getElementById('btn-open-reset').textContent = mt('passwordForgot');
+    document.getElementById('mAuthPhoneSummary').textContent = mt('authPhoneSummary');
+    document.getElementById('mCodeStepTitle').textContent = mt('codeStep');
+    document.getElementById('mCodeLabel').textContent = mt('codeLabel');
+    document.getElementById('inp-code').placeholder = mt('codePlaceholder');
+    document.getElementById('btn-verify').textContent = mt('login');
+    document.getElementById('btn-back').textContent = mt('back');
+    document.getElementById('mAuthPhoneSummaryCode').textContent = mt('authPhoneCodeSummary');
+    document.getElementById('mSetPasswordStepTitle').textContent = mt('setPasswordStep');
+    document.getElementById('mNewPasswordLabel').textContent = mt('newPasswordLabel');
+    document.getElementById('inp-new-password').placeholder = mt('newPasswordPlaceholder');
+    document.getElementById('mConfirmPasswordLabel').textContent = mt('confirmPasswordLabel');
+    document.getElementById('inp-confirm-password').placeholder = mt('confirmPasswordPlaceholder');
+    document.getElementById('btn-save-password').textContent = mt('savePassword');
+    document.getElementById('btn-set-password-later').textContent = mt('continueLater');
+    document.getElementById('mSetPasswordHint').textContent = mt('setPasswordHint');
+    document.getElementById('mAuthPhoneSummarySet').textContent = mt('authPhoneSetSummary');
+    document.getElementById('mResetPasswordStepTitle').textContent = mt('passwordResetStep');
+    document.getElementById('mResetCodeLabel').textContent = mt('passwordResetCodeLabel');
+    document.getElementById('inp-reset-code').placeholder = mt('codePlaceholder');
+    document.getElementById('mResetPasswordLabel').textContent = mt('newPasswordLabel');
+    document.getElementById('inp-reset-password').placeholder = mt('newPasswordPlaceholder');
+    document.getElementById('mResetPasswordConfirmLabel').textContent = mt('confirmPasswordLabel');
+    document.getElementById('inp-reset-password-confirm').placeholder = mt('confirmPasswordPlaceholder');
+    document.getElementById('btn-reset-password').textContent = mt('passwordResetAction');
+    document.getElementById('btn-reset-back').textContent = mt('back');
+    document.getElementById('mAuthPhoneSummaryReset').textContent = mt('authPhoneResetSummary');
+    document.getElementById('mHeaderGreeting').textContent = mt('greeting');
+    document.getElementById('mLogoutBtn').textContent = mt('logout');
+    if (!profile) {
+      document.getElementById('hdr-name').textContent = mt('client');
+    }
+    document.getElementById('mBalanceLabel').textContent = mt('balanceLabel');
+    document.querySelector('.balance-unit').textContent = mt('bonusesUnit');
+    document.getElementById('mQuickTitle').textContent = mt('quickTitle');
+    document.getElementById('mQuickQr').textContent = mt('quickQr');
+    document.getElementById('mQuickHistory').textContent = mt('quickHistory');
+    document.getElementById('mQuickRules').textContent = mt('quickRules');
+    document.getElementById('mQuickProfile').textContent = mt('quickProfile');
+    document.getElementById('mStatsTitle').textContent = mt('statsTitle');
+    document.getElementById('mStatBalanceLabel').textContent = mt('statBalance');
+    document.getElementById('mStatSpentLabel').textContent = mt('statSpent');
+    document.getElementById('mExpiryNoticeTitle').textContent = mt('expiryNoticeTitle');
+    document.getElementById('mFuelTitle').textContent = mt('fuelTitle');
+    document.getElementById('mQrTitle').textContent = mt('qrTitle');
+    document.getElementById('mQrHint').textContent = mt('qrHint');
+    document.getElementById('mHistoryTitle').textContent = mt('historyTitle');
+    document.getElementById('mNewsTitle').textContent = mt('newsTitle');
+    document.getElementById('mRulesTitle').textContent = mt('rulesTitle');
+    document.getElementById('mProfileTitle').textContent = mt('profileTitle');
+    document.getElementById('mProfileEditTitle').textContent = mt('profileEditTitle');
+    document.getElementById('mProfileEditLastNameLabel').textContent = mt('profileEditLastName');
+    document.getElementById('mProfileEditFirstNameLabel').textContent = mt('profileEditFirstName');
+    document.getElementById('mProfileEditPatronymicLabel').textContent = mt('profileEditPatronymic');
+    document.getElementById('mProfileEditBirthLabel').textContent = mt('profileEditBirth');
+    document.getElementById('mProfileEditPhotoLabel').textContent = mt('profileEditPhoto');
+    document.getElementById('edit-last-name').placeholder = mt('profileEditLastNamePlaceholder');
+    document.getElementById('edit-first-name').placeholder = mt('profileEditFirstNamePlaceholder');
+    document.getElementById('edit-patronymic').placeholder = mt('profileEditPatronymicPlaceholder');
+    document.getElementById('btn-pick-photo').textContent = mt('profilePhotoPick');
+    document.getElementById('profile-photo-hint').textContent = mt('profilePhotoHint');
+    document.getElementById('btn-remove-photo').textContent = mt('profilePhotoRemove');
+    document.getElementById('btn-save-profile').textContent = mt('profileSave');
+    document.getElementById('mSupportTitle').textContent = mt('supportTitle');
+    document.getElementById('mSupportText').textContent = mt('supportText');
+    document.getElementById('mSupportEmailLabel').textContent = mt('supportEmail');
+    document.getElementById('mPrivacyPolicyLabel').textContent = mt('privacyPolicyLabel');
+    document.getElementById('mPrivacyPolicyValue').textContent = mt('privacyPolicyValue');
+    document.getElementById('mNavHome').textContent = mt('navHome');
+    document.getElementById('mNavQr').textContent = mt('navQr');
+    document.getElementById('mNavHistory').textContent = mt('navHistory');
+    document.getElementById('mNavNews').textContent = mt('navNews');
+    document.getElementById('mNavProfile').textContent = mt('navProfile');
+    const newsBellBtn = document.getElementById('newsBellBtn');
+    newsBellBtn.setAttribute('aria-label', mt('newsTitle'));
+    newsBellBtn.setAttribute('title', mt('newsTitle'));
+  }
+
+  let token = localStorage.getItem('azs_token') || null;
+  let profile = null;
+  let clientCard = null;
+  let qrLoaded = false;
+  let txLoaded = false;
+  let newsLoaded = false;
+  let newsItems = [];
+  let pendingProfilePhotoDataUrl = '';
+  let rulesLoaded = false;
+  let fuelLoading = false;
+  let fuelTimer = null;
+  let offlineNoticeTimer = 0;
+
+  function getProfileFullName(data) {
+    const parts = [data?.last_name, data?.first_name, data?.patronymic]
+      .map((part) => String(part || '').trim())
+      .filter(Boolean);
+    return parts.join(' ') || data?.name || '';
+  }
+
+  function getProfileShortName(data) {
+    return data?.first_name || getProfileFullName(data) || data?.phone || mt('client');
+  }
+
+  function getProfileInitials(data) {
+    const parts = [data?.first_name, data?.last_name]
+      .map((part) => String(part || '').trim())
+      .filter(Boolean);
+    if (!parts.length && data?.name) {
+      parts.push(...String(data.name).trim().split(/\s+/));
+    }
+    return parts.slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join('') || 'AZ';
+  }
+
+  function offlineToast(messageKey) {
+    const now = Date.now();
+    if (now - offlineNoticeTimer < 5000) return;
+    offlineNoticeTimer = now;
+    toast(mt(messageKey), 'warning');
+  }
+
+  function renderAvatarNode(container, data, photoDataUrl = data?.photo_data_url) {
+    if (!container) return;
+    container.replaceChildren();
+    if (photoDataUrl) {
+      const image = document.createElement('img');
+      image.src = photoDataUrl;
+      image.alt = 'avatar';
+      image.loading = 'eager';
+      image.decoding = 'sync';
+      container.appendChild(image);
+      return;
+    }
+
+    const fallback = document.createElement('div');
+    fallback.className = 'profile-avatar-fallback';
+    fallback.textContent = getProfileInitials(data);
+    container.appendChild(fallback);
+  }
+
+  function renderEditPhotoPreview() {
+    const preview = document.getElementById('edit-photo-preview');
+    if (!preview) return;
+    const draft = {
+      ...(profile || {}),
+      first_name: document.getElementById('edit-first-name')?.value || profile?.first_name,
+      last_name: document.getElementById('edit-last-name')?.value || profile?.last_name,
+      patronymic: document.getElementById('edit-patronymic')?.value || profile?.patronymic,
+      name: getProfileFullName(profile || {}),
+    };
+    renderAvatarNode(preview, draft, pendingProfilePhotoDataUrl || profile?.photo_data_url || '');
+  }
+
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('read_failed'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function loadImageFromDataUrl(dataUrl) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('image_load_failed'));
+      image.src = dataUrl;
+    });
+  }
+
+  async function compressProfilePhoto(file) {
+    const sourceDataUrl = await readFileAsDataUrl(file);
+    const image = await loadImageFromDataUrl(sourceDataUrl);
+    const maxSide = 960;
+    const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    context.drawImage(image, 0, 0, width, height);
+
+    let quality = 0.86;
+    let output = canvas.toDataURL('image/jpeg', quality);
+    while (output.length > 1_600_000 && quality > 0.52) {
+      quality -= 0.08;
+      output = canvas.toDataURL('image/jpeg', quality);
+    }
+    return output;
+  }
+
+  function clearProfilePhoto() {
+    pendingProfilePhotoDataUrl = '';
+    document.getElementById('edit-photo').value = '';
+    renderEditPhotoPreview();
+  }
+
+  function getSeenNewsId() {
+    return parseInt(readMobilePreference(LS_MOBILE_NEWS_SEEN, '0'), 10) || 0;
+  }
+
+  function setSeenNewsId(id) {
+    writeMobilePreference(LS_MOBILE_NEWS_SEEN, String(id || 0));
+  }
+
+  function getUnreadNewsCount() {
+    const seenId = getSeenNewsId();
+    return newsItems.filter((item) => Number(item.id || 0) > seenId).length;
+  }
+
+  function updateNewsBadges() {
+    const unreadCount = getUnreadNewsCount();
+    ['newsBellBadge', 'newsNavBadge'].forEach((id) => {
+      const badge = document.getElementById(id);
+      if (!badge) return;
+      badge.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
+      badge.classList.toggle('badge-hidden', unreadCount <= 0);
+    });
+  }
+
+  function markNewsAsSeen() {
+    const latestId = newsItems.reduce((maxId, item) => Math.max(maxId, Number(item.id || 0)), 0);
+    if (latestId > 0) {
+      setSeenNewsId(latestId);
+      updateNewsBadges();
+    }
+  }
+
+  function renderNews() {
+    const container = document.getElementById('news-container');
+    if (!newsItems.length) {
+      container.innerHTML = `<div class="tx-empty">${mt('newsEmpty')}</div>`;
+      return;
+    }
+
+    container.innerHTML = '<div class="news-list">' + newsItems.map((item) => `
+      <article class="news-card">
+        <div class="news-card-head">
+          <div class="news-card-title">${item.title}</div>
+          <div class="news-card-date">${mt('newsPublished')}: ${mobileDateTime(item.published_at, { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</div>
+        </div>
+        <div class="news-card-body">${item.body}</div>
+      </article>
+    `).join('') + '</div>';
+  }
+
+  // ---- TOAST ----
+  function toast(msg, type='') {
+    const el = document.createElement('div');
+    el.className = 'toast' + (type ? ' '+type : '');
+    el.textContent = msg;
+    document.getElementById('toastWrap').appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+  }
+
+  // ---- AUTH ----
+  async function apiPost(url, body, options = {}) {
+    const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+    if (options.auth && token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    const r = await fetch(url, { method:'POST', headers, body: JSON.stringify(body) });
+    let data = null;
+    try {
+      data = await r.json();
+    } catch {}
+    return { ok: r.ok, status: r.status, data };
+  }
+  async function apiGet(url, options = {}) {
+    const { cacheKey = null, allowStale = true } = options;
+    try {
+      const r = await fetch(url, {
+        offlineAuth: 'mobile',
+        offlineCacheKey: cacheKey,
+        offlineCacheScope: getStoredMobileIdentity(),
+        offlineAllowStale: allowStale,
+      });
+      const data = r.ok ? await r.json() : null;
+      const fromCache = !!window.AZSOffline?.isCachedResponse(r);
+      if (fromCache) {
+        offlineToast('offlineCachedData');
+      }
+      return {
+        ok: r.ok,
+        status: r.status,
+        data,
+        fromCache,
+        cachedAt: window.AZSOffline?.getCachedSavedAt(r) || null,
+      };
+    } catch (error) {
+      return { ok: false, status: 0, data: null, fromCache: false, error };
+    }
+  }
+
+  async function loadClientCard(force = false) {
+    if (clientCard && !force) {
+      return { ok: true, data: clientCard };
+    }
+    const response = await apiGet('/api/mobile/client-card', { cacheKey: 'client_card' });
+    if (response.ok) {
+      clientCard = response.data;
+    }
+    return response;
+  }
+
+  function normalizeSupportedPhoneInput(rawValue) {
+    let digits = String(rawValue || '').replace(/\D/g, '');
+    if (digits.startsWith('00')) digits = digits.slice(2);
+
+    if (digits.length === 10) return '+7' + digits;
+    if (digits.length === 11 && (digits.startsWith('7') || digits.startsWith('8'))) return '+7' + digits.slice(1);
+    if (digits.length === 9) return '+992' + digits;
+    if (digits.length === 12 && digits.startsWith('992')) return '+' + digits;
+
+    return null;
+  }
+
+  function formatSupportedPhoneInput(rawValue) {
+    const normalized = normalizeSupportedPhoneInput(rawValue);
+    if (!normalized) return String(rawValue || '').trim();
+
+    const digits = normalized.slice(1);
+    if (digits.startsWith('7')) {
+      const national = digits.slice(1);
+      return `+7 (${national.slice(0, 3)}) ${national.slice(3, 6)}-${national.slice(6, 8)}-${national.slice(8, 10)}`;
+    }
+
+    const national = digits.slice(3);
+    return `+992 ${national.slice(0, 2)} ${national.slice(2, 5)} ${national.slice(5, 7)} ${national.slice(7, 9)}`;
+  }
+
+  // Phone formatting
+  const inp = document.getElementById('inp-phone');
+  inp.addEventListener('input', () => {
+    inp.value = inp.value.replace(/[^\d+()\-\s]/g, '');
+  });
+
+  inp.addEventListener('blur', () => {
+    const formatted = formatSupportedPhoneInput(inp.value);
+    if (formatted) inp.value = formatted;
+  });
+
+  function getRawPhone() {
+    return normalizeSupportedPhoneInput(inp.value);
+  }
+
+  function getPasswordValue(id) {
+    return String(document.getElementById(id)?.value || '').trim();
+  }
+
+  function updateAuthPhoneSummaries() {
+    const rawPhone = getRawPhone();
+    const phoneText = rawPhone || formatSupportedPhoneInput(inp.value) || inp.value.trim() || '—';
+    ['auth-phone-password', 'auth-phone-code', 'auth-phone-set-password', 'auth-phone-reset'].forEach((id) => {
+      const element = document.getElementById(id);
+      if (element) element.textContent = phoneText;
+    });
+  }
+
+  function showAuthStep(stepId) {
+    ['step-phone', 'step-password', 'step-code', 'step-set-password', 'step-reset'].forEach((id) => {
+      const element = document.getElementById(id);
+      if (element) element.style.display = id === stepId ? 'block' : 'none';
+    });
+    ['err-phone', 'err-password', 'err-code', 'err-set-password', 'err-reset'].forEach(hideErr);
+    updateAuthPhoneSummaries();
+  }
+
+  function validatePasswordPair(password, confirmPassword, errorId) {
+    if (password.length < 6) {
+      showErr(errorId, mt('passwordTooShort'));
+      return false;
+    }
+    if (password !== confirmPassword) {
+      showErr(errorId, mt('passwordMismatch'));
+      return false;
+    }
+    return true;
+  }
+
+  document.getElementById('btn-send-code').addEventListener('click', async () => {
+    const phone = getRawPhone();
+    if (!phone) {
+      showErr('err-phone', mt('invalidPhone')); return;
+    }
+    const btn = document.getElementById('btn-send-code');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner-inline"></span>${mt('sending')}`;
+    hideErr('err-phone');
+
+    const { ok, data } = await apiPost('/api/mobile/auth/send-code', { phone });
+    btn.disabled = false;
+    btn.textContent = mt('sendCode');
+    if (!ok) { showErr('err-phone', data?.detail || mt('sendError')); return; }
+
+    if (data?.redirect_to_password) {
+      document.getElementById('stub-hint').innerHTML = '';
+      document.getElementById('inp-password').value = '';
+      showAuthStep('step-password');
+      document.getElementById('inp-password').focus();
+      return;
+    }
+
+    showAuthStep('step-code');
+    document.getElementById('inp-code').value = data?.code || '';
+    document.getElementById('inp-code').focus();
+    if (data?.code) {
+      document.getElementById('stub-hint').innerHTML = `${mt('testMode', { code: data.code })}<br>${mt('selfCodeHint')}`;
+    } else {
+      document.getElementById('stub-hint').textContent = mt('cashierCodeHint');
+    }
+  });
+
+  document.getElementById('btn-show-password').addEventListener('click', () => {
+    const phone = getRawPhone();
+    if (!phone) {
+      showErr('err-phone', mt('invalidPhone'));
+      return;
+    }
+    hideErr('err-phone');
+    document.getElementById('inp-password').value = '';
+    showAuthStep('step-password');
+    document.getElementById('inp-password').focus();
+  });
+
+  document.getElementById('btn-back').addEventListener('click', () => {
+    showAuthStep('step-phone');
+  });
+
+  document.getElementById('btn-password-back').addEventListener('click', () => {
+    showAuthStep('step-phone');
+  });
+
+  document.getElementById('btn-login-password').addEventListener('click', async () => {
+    const phone = getRawPhone();
+    const password = getPasswordValue('inp-password');
+    if (!phone) { showErr('err-password', mt('invalidPhone')); return; }
+    if (!password) { showErr('err-password', mt('passwordRequired')); return; }
+
+    const btn = document.getElementById('btn-login-password');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner-inline"></span>${mt('verify')}`;
+    hideErr('err-password');
+
+    const { ok, data } = await apiPost('/api/mobile/auth/login-password', { phone, password });
+    btn.disabled = false;
+    btn.textContent = mt('passwordLogin');
+    if (!ok) { showErr('err-password', data?.detail || mt('sendError')); return; }
+
+    token = data.access_token;
+    localStorage.setItem('azs_token', token);
+    enterApp();
+  });
+
+  document.getElementById('btn-open-reset').addEventListener('click', async () => {
+    const phone = getRawPhone();
+    if (!phone) { showErr('err-password', mt('invalidPhone')); return; }
+
+    const btn = document.getElementById('btn-open-reset');
+    btn.disabled = true;
+    hideErr('err-password');
+
+    const { ok, data } = await apiPost('/api/mobile/auth/request-password-reset', { phone });
+    btn.disabled = false;
+    if (!ok) { showErr('err-password', data?.detail || mt('sendError')); return; }
+
+    document.getElementById('inp-reset-code').value = '';
+    document.getElementById('inp-reset-password').value = '';
+    document.getElementById('inp-reset-password-confirm').value = '';
+    showAuthStep('step-reset');
+    document.getElementById('reset-stub-hint').textContent = mt('passwordResetHint');
+    document.getElementById('inp-reset-code').focus();
+  });
+
+  document.getElementById('btn-reset-back').addEventListener('click', () => {
+    showAuthStep('step-password');
+  });
+
+  document.getElementById('btn-verify').addEventListener('click', async () => {
+    const phone = getRawPhone();
+    const code = document.getElementById('inp-code').value.trim();
+    if (!phone) { showErr('err-code', mt('invalidPhone')); return; }
+    if (!code) { showErr('err-code', mt('enterCode')); return; }
+    const btn = document.getElementById('btn-verify');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner-inline"></span>${mt('verify')}`;
+    hideErr('err-code');
+
+    const { ok, data } = await apiPost('/api/mobile/auth/verify', { phone, code });
+    btn.disabled = false;
+    btn.textContent = mt('login');
+    if (!ok) { showErr('err-code', data?.detail || mt('invalidCode')); return; }
+
+    token = data.access_token;
+    localStorage.setItem('azs_token', token);
+    if (data.password_required) {
+      document.getElementById('inp-new-password').value = '';
+      document.getElementById('inp-confirm-password').value = '';
+      showAuthStep('step-set-password');
+      document.getElementById('inp-new-password').focus();
+      return;
+    }
+    enterApp();
+  });
+
+  document.getElementById('btn-save-password').addEventListener('click', async () => {
+    const password = getPasswordValue('inp-new-password');
+    const confirmPassword = getPasswordValue('inp-confirm-password');
+    hideErr('err-set-password');
+    if (!validatePasswordPair(password, confirmPassword, 'err-set-password')) return;
+
+    const btn = document.getElementById('btn-save-password');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner-inline"></span>${mt('savePasswordLoading')}`;
+
+    const { ok, data } = await apiPost('/api/mobile/auth/set-password', { password }, { auth: true });
+    btn.disabled = false;
+    btn.textContent = mt('savePassword');
+    if (!ok) { showErr('err-set-password', data?.detail || mt('loadSaveError')); return; }
+
+    toast(mt('passwordSaved'), 'success');
+    enterApp();
+  });
+
+  document.getElementById('btn-set-password-later').addEventListener('click', () => {
+    enterApp();
+  });
+
+  document.getElementById('btn-reset-password').addEventListener('click', async () => {
+    const phone = getRawPhone();
+    const code = document.getElementById('inp-reset-code').value.trim();
+    const password = getPasswordValue('inp-reset-password');
+    const confirmPassword = getPasswordValue('inp-reset-password-confirm');
+    hideErr('err-reset');
+
+    if (!phone) { showErr('err-reset', mt('invalidPhone')); return; }
+    if (!code) { showErr('err-reset', mt('enterCode')); return; }
+    if (!validatePasswordPair(password, confirmPassword, 'err-reset')) return;
+
+    const btn = document.getElementById('btn-reset-password');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner-inline"></span>${mt('savePasswordLoading')}`;
+
+    const { ok, data } = await apiPost('/api/mobile/auth/reset-password', { phone, code, password });
+    btn.disabled = false;
+    btn.textContent = mt('passwordResetAction');
+    if (!ok) { showErr('err-reset', data?.detail || mt('loadSaveError')); return; }
+
+    token = data.access_token;
+    localStorage.setItem('azs_token', token);
+    toast(mt('passwordSaved'), 'success');
+    enterApp();
+  });
+
+  function showErr(id, msg) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+  function hideErr(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('show');
+  }
+
+  // ---- APP ----
+  async function enterApp() {
+    document.getElementById('screen-login').classList.remove('active');
+    document.getElementById('screen-app').classList.add('active');
+    await loadProfile(true);
+    loadFuelPrices();
+    loadNews(true);
+
+    // Автообновление главной, чтобы клиент видел актуальный баланс и сроки сгорания.
+    if (!fuelTimer) {
+      fuelTimer = setInterval(() => {
+        if (!token) return;
+        const homeActive = document.getElementById('tab-home')?.classList.contains('active');
+        const profileActive = document.getElementById('tab-profile')?.classList.contains('active');
+        if (homeActive || profileActive) {
+          clientCard = null;
+          loadProfile(true);
+        }
+        if (homeActive) loadFuelPrices();
+      }, 30000);
+    }
+  }
+
+  async function loadFuelPrices() {
+    if (fuelLoading) return;
+    fuelLoading = true;
+    const c = document.getElementById('fuel-container');
+
+    const { ok, data, fromCache } = await apiGet('/api/mobile/fuel-prices', { cacheKey: 'fuel_prices' });
+    fuelLoading = false;
+
+    if (!ok) {
+      c.innerHTML = `<div class="tx-empty">${navigator.onLine ? mt('fuelLoadError') : mt('offlineNoCache')}</div>`;
+      return;
+    }
+    if (!data || !data.length) {
+      c.innerHTML = `<div class="tx-empty">${mt('fuelEmpty')}</div>`;
+      return;
+    }
+
+    const EMOJI = { ai92: '⛽', ai95: '⛽', ai98: '🔥', diesel: '🚛', gas: '💨' };
+    const ICON_CLASS = { ai92: 'fuel-ic-blue', ai95: 'fuel-ic-green', ai98: 'fuel-ic-orange', diesel: 'fuel-ic-purple', gas: 'fuel-ic-blue' };
+
+    let maxUpdated = null;
+    data.forEach(f => {
+      if (!f.updated_at) return;
+      const d = new Date(f.updated_at);
+      if (!isNaN(d.getTime()) && (!maxUpdated || d > maxUpdated)) maxUpdated = d;
+    });
+    const updatedLabel = maxUpdated
+      ? mobileDateTime(maxUpdated, { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
+      : '—';
+
+    c.innerHTML =
+      '<div class="fuel-list">' +
+      data.map(f => {
+        const icon = EMOJI[f.code] || '⛽';
+        const cls = ICON_CLASS[f.code] || 'fuel-ic-blue';
+        return `
+          <div class="fuel-item">
+            <div class="fuel-left">
+              <div class="fuel-icon ${cls}">${icon}</div>
+              <div style="min-width:0">
+                <div class="fuel-name">${f.name}</div>
+                <div class="fuel-code">${f.code}</div>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div class="fuel-price">${mobilePrice(f.price_per_liter, 2)}</div>
+            </div>
+          </div>`;
+      }).join('') +
+      '</div>' +
+      `<div class="fuel-updated">${mt('updated')} ${updatedLabel}</div>` +
+      (fromCache ? `<div class="fuel-updated">${mt('offlineCachedData')}</div>` : '');
+  }
+
+  async function loadProfile(force = false) {
+    const { ok, data, status } = await loadClientCard(force);
+    if (!ok) {
+      if (status === 0 || cacheableStatus(status)) {
+        offlineToast('offlineNoCache');
+        return;
+      }
+      logout();
+      return;
+    }
+    profile = data;
+    const nextIdentity = `client:${data.id || data.phone || 'guest'}`;
+    const identityChanged = nextIdentity !== getStoredMobileIdentity();
+    setMobileIdentity(nextIdentity);
+    if (identityChanged) {
+      newsLoaded = false;
+      newsItems = [];
+      updateNewsBadges();
+    }
+    applyMobileLocale();
+    const name = getProfileShortName(data);
+    document.getElementById('hdr-name').textContent = name;
+    document.getElementById('hdr-balance').textContent = mobileNumber(data.bonus_balance, 0);
+    document.getElementById('stat-balance').textContent = mobileNumber(data.bonus_balance, 0);
+    document.getElementById('stat-spent').textContent = mobileMoney(data.total_spent || 0, 0);
+
+    renderExpiryNotice(data.summary || {}, data.bonus_expiry || []);
+    renderProfile(data);
+  }
+
+  function renderExpiryNotice(summary, bonusExpiry) {
+    const notice = document.getElementById('expiry-notice');
+    const main = document.getElementById('expiry-notice-main');
+    const sub = document.getElementById('expiry-notice-sub');
+    const nearest = Array.isArray(bonusExpiry) && bonusExpiry.length ? bonusExpiry[0] : null;
+    const dateLabel = summary.nearest_expiry_date_label || nearest?.expiry_date_label;
+    let amount = summary.nearest_expiry_remaining;
+    if ((amount === null || amount === undefined) && nearest?.expiry_date) {
+      amount = (bonusExpiry || [])
+        .filter((item) => item?.expiry_date === nearest.expiry_date)
+        .reduce((total, item) => total + (parseFloat(item?.remaining || 0) || 0), 0);
+    }
+    if ((amount === null || amount === undefined) && nearest?.remaining !== undefined) {
+      amount = nearest.remaining;
+    }
+
+    if (!notice || !main || !sub) return;
+
+    if (!dateLabel || amount === null || amount === undefined) {
+      notice.style.display = 'block';
+      main.textContent = mt('expiryNoticeEmpty');
+      sub.textContent = mt('profileExpiryEmpty');
+      return;
+    }
+
+    notice.style.display = 'block';
+    main.textContent = dateLabel;
+    sub.textContent = mt('expiryNoticeText')
+      .replace('{date}', dateLabel)
+      .replace('{amount}', `${mobileNumber(amount, 0)} ${mt('bonusShort')}`);
+  }
+
+  function renderProfile(d) {
+    pendingProfilePhotoDataUrl = d.photo_data_url || '';
+    const fullName = getProfileFullName(d) || mt('noName');
+    const birthStr = d.birth_date ? new Date(d.birth_date).toLocaleDateString(mobileLocale()) : mt('noDate');
+    const summary = d.summary || {};
+    const expiryMarkup = Array.isArray(d.bonus_expiry) && d.bonus_expiry.length
+      ? `<div class="profile-chip-list">${d.bonus_expiry.map((item) => `
+          <div class="profile-chip">
+            <div>
+              <div class="profile-chip-title">${item.expiry_date_label || mt('noDate')}</div>
+              <div class="profile-chip-subtitle">${mt('profileExpiryIssued')}: ${mobileNumber(item.bonus_amount, 0)} ${mt('bonusShort')}</div>
+            </div>
+            <div class="profile-chip-value">${mobileNumber(item.remaining, 0)} ${mt('bonusShort')}</div>
+          </div>`).join('')}</div>`
+      : `<div class="profile-section-empty">${mt('profileExpiryEmpty')}</div>`;
+    document.getElementById('profile-data').innerHTML = `
+      <div class="profile-hero">
+        <div id="profile-hero-avatar" class="profile-avatar"></div>
+        <div class="profile-hero-copy">
+          <div class="profile-hero-name">${fullName}</div>
+          <div class="profile-hero-phone">${d.phone}</div>
+        </div>
+      </div>
+      <div class="profile-row"><span class="profile-key">${mt('phone')}</span><span class="profile-val">${d.phone}</span></div>
+      <div class="profile-row"><span class="profile-key">${mt('name')}</span><span class="profile-val">${fullName}</span></div>
+      <div class="profile-row"><span class="profile-key">${mt('profileEditLastName')}</span><span class="profile-val">${d.last_name || mt('noName')}</span></div>
+      <div class="profile-row"><span class="profile-key">${mt('profileEditFirstName')}</span><span class="profile-val">${d.first_name || mt('noName')}</span></div>
+      <div class="profile-row"><span class="profile-key">${mt('profileEditPatronymic')}</span><span class="profile-val">${d.patronymic || mt('noName')}</span></div>
+      <div class="profile-row"><span class="profile-key">${mt('birthDate')}</span><span class="profile-val">${birthStr}</span></div>
+      <div class="profile-row"><span class="profile-key">${mt('bonusBalance')}</span><span class="profile-val" style="color:var(--blue)">${mobileNumber(d.bonus_balance, 0)} ${mt('bonusesUnit')}</span></div>
+      <div class="profile-row"><span class="profile-key">${mt('totalSpent')}</span><span class="profile-val">${mobileMoney(d.total_spent||0, 0)}</span></div>
+      <div class="profile-row"><span class="profile-key">${mt('regDate')}</span><span class="profile-val">${d.reg_date ? new Date(d.reg_date).toLocaleDateString(mobileLocale()) : mt('noDate')}</span></div>
+      <div class="profile-row"><span class="profile-key">${mt('language')}</span><span class="profile-val"><select id="mobile-language-profile" class="form-control" style="width:auto;min-width:140px;padding:8px 12px;font-size:14px;" onchange="handleMobileLanguageChange(this.value)">${mobileLanguageOptionsMarkup()}</select></span></div>
+      <div class="profile-section">
+        <div class="profile-section-title">${mt('profileSummaryTitle')}</div>
+        <div class="profile-row"><span class="profile-key">${mt('profileSummaryAccrued')}</span><span class="profile-val">${mobileNumber(summary.total_accrued_bonus || 0, 0)} ${mt('bonusShort')}</span></div>
+        <div class="profile-row"><span class="profile-key">${mt('profileSummaryRedeemed')}</span><span class="profile-val">${mobileNumber(summary.total_redeemed_bonus || 0, 0)} ${mt('bonusShort')}</span></div>
+        <div class="profile-row"><span class="profile-key">${mt('profileSummaryCancelled')}</span><span class="profile-val">${mobileNumber(summary.cancellations_count || 0, 0)}</span></div>
+      </div>
+      <div class="profile-section">
+        <div class="profile-section-title">${mt('profileExpiryTitle')}</div>
+        ${expiryMarkup}
+      </div>
+      <button onclick="openEditProfile()" style="margin-top:12px;width:100%;padding:12px;background:#f0f6ff;color:var(--blue);border:1.5px solid #c9dffe;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">${mt('editData')}</button>
+    `;
+    renderAvatarNode(document.getElementById('profile-hero-avatar'), d, d.photo_data_url || '');
+    // fill edit form
+    document.getElementById('edit-last-name').value = d.last_name || '';
+    document.getElementById('edit-first-name').value = d.first_name || d.name || '';
+    document.getElementById('edit-patronymic').value = d.patronymic || '';
+    if (d.birth_date) {
+      const bd = new Date(d.birth_date);
+      const iso = bd.toISOString().split('T')[0];
+      document.getElementById('edit-birth').value = iso;
+    } else {
+      document.getElementById('edit-birth').value = '';
+    }
+    renderEditPhotoPreview();
+    syncMobileLanguageControls();
+  }
+
+  function openEditProfile() {
+    document.getElementById('profile-edit-form').style.display = 'block';
+    document.getElementById('profile-edit-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function saveProfile() {
+    const btn = document.getElementById('btn-save-profile');
+    btn.disabled = true;
+    btn.textContent = mt('profileSaving');
+    const lastName = document.getElementById('edit-last-name').value.trim();
+    const firstName = document.getElementById('edit-first-name').value.trim();
+    const patronymic = document.getElementById('edit-patronymic').value.trim();
+    const birth = document.getElementById('edit-birth').value;
+    const profilePayload = {
+      last_name: lastName || null,
+      first_name: firstName || null,
+      patronymic: patronymic || null,
+      photo_data_url: pendingProfilePhotoDataUrl,
+      birth_date: birth || ''
+    };
+    const resp = await fetch('/api/mobile/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profilePayload),
+      offlineAuth: 'mobile',
+      offlineQueue: true,
+      offlineQueueScope: getStoredMobileIdentity(),
+      offlineInvalidateCacheKeys: ['client_card'],
+      offlineReplayLabel: 'mobile-profile-save',
+    });
+    btn.disabled = false;
+    btn.textContent = mt('profileSave');
+    if (window.AZSOffline?.isQueuedResponse(resp)) {
+      const optimistic = {
+        ...(profile || clientCard || {}),
+        ...profilePayload,
+      };
+      clientCard = optimistic;
+      profile = optimistic;
+      pendingProfilePhotoDataUrl = optimistic.photo_data_url || '';
+      document.getElementById('hdr-name').textContent = getProfileShortName(optimistic);
+      document.getElementById('profile-edit-form').style.display = 'none';
+      renderExpiryNotice(optimistic.summary || {}, optimistic.bonus_expiry || []);
+      renderProfile(optimistic);
+      toast(mt('offlineCachedData'), 'warning');
+      return;
+    }
+    if (!resp.ok) {
+      let detail = mt('loadSaveError');
+      try {
+        const errorData = await resp.json();
+        if (errorData && errorData.detail) detail = errorData.detail;
+      } catch {}
+      toast(detail, 'error');
+      return;
+    }
+    clientCard = null;
+    const refreshed = await loadClientCard(true);
+    const data = refreshed.ok ? refreshed.data : await resp.json();
+    profile = data;
+    pendingProfilePhotoDataUrl = data.photo_data_url || '';
+    document.getElementById('hdr-name').textContent = getProfileShortName(data);
+    document.getElementById('profile-edit-form').style.display = 'none';
+    renderProfile(data);
+    toast(mt('profileSave'), 'success');
+  }
+
+  document.getElementById('edit-photo').addEventListener('change', (event) => {
+    const pickButton = document.getElementById('btn-pick-photo');
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast(mt('profilePhotoInvalid'), 'error');
+      event.target.value = '';
+      return;
+    }
+    if (file.size > 12 * 1024 * 1024) {
+      toast(mt('profilePhotoTooLarge'), 'error');
+      event.target.value = '';
+      return;
+    }
+    pickButton.disabled = true;
+    pickButton.textContent = mt('profileSaving');
+    compressProfilePhoto(file).then((dataUrl) => {
+      pendingProfilePhotoDataUrl = dataUrl;
+      renderEditPhotoPreview();
+      pickButton.disabled = false;
+      pickButton.textContent = mt('profilePhotoPick');
+    }).catch(() => {
+      toast(mt('loadSaveError'), 'error');
+      event.target.value = '';
+      pickButton.disabled = false;
+      pickButton.textContent = mt('profilePhotoPick');
+    });
+  });
+
+  ['edit-last-name', 'edit-first-name', 'edit-patronymic'].forEach((id) => {
+    document.getElementById(id).addEventListener('input', () => {
+      renderEditPhotoPreview();
+    });
+  });
+
+  async function loadQR() {
+    if (qrLoaded) return;
+    const { ok, data } = await apiGet('/api/mobile/qrcode', { cacheKey: 'qrcode' });
+    if (!ok) return;
+    document.getElementById('qr-loading').style.display = 'none';
+    document.getElementById('qr-img').src = 'data:image/png;base64,' + data.qr_base64;
+    document.getElementById('qr-img').style.display = 'block';
+    document.getElementById('qr-phone').textContent = data.phone;
+    qrLoaded = true;
+  }
+
+  async function loadTx() {
+    const { ok, data } = await loadClientCard();
+    if (!ok) return;
+    const c = document.getElementById('tx-container');
+    const items = Array.isArray(data.history) ? data.history : [];
+    if (!items.length) { c.innerHTML = `<div class="tx-empty">${mt('txEmpty')}</div>`; return; }
+    const types = { accrual: mt('accrual'), redemption: mt('redeem'), redeem: mt('redeem'), expire: mt('expire'), cancellation: mt('cancellation') };
+    c.innerHTML = '<div class="tx-list">' + items.map(t => {
+      const isAccrue = t.type === 'accrual';
+      const isCancellation = t.type === 'cancellation';
+      const iconClass = isCancellation ? 'tx-cancel' : (isAccrue ? 'tx-accrue' : 'tx-redeem');
+      const ico = isCancellation
+        ? `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>`
+        : (isAccrue
+          ? `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>`
+          : `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/></svg>`);
+      const amount = Math.abs(parseFloat(t.amount_bonus || 0));
+      const meta = [];
+      if (t.purchase_amount) meta.push(`${mobileMoney(t.purchase_amount, 0)}`);
+      if (t.fuel_type) {
+        const fuelMeta = [t.fuel_type];
+        if (t.fuel_liters) fuelMeta.push(`${mobileNumber(t.fuel_liters, 3)} л`);
+        if (t.price_per_liter) fuelMeta.push(mobilePrice(t.price_per_liter, 2));
+        meta.push(fuelMeta.join(' • '));
+      }
+      if (t.check_id) meta.push(`${mt('historyReceipt')} ${t.check_id}`);
+      if (t.canceled_check_id) meta.push(`${mt('historyCancelReceipt')} ${t.canceled_check_id}`);
+      if (t.reason) meta.push(`${mt('historyReason')}: ${t.reason}`);
+      const metaText = meta.length ? meta.join(' • ') : mt('historyNoDetails');
+      const amountHtml = isCancellation
+        ? ''
+        : `<div class="tx-amount ${isAccrue ? 'tx-plus' : 'tx-minus'}">${isAccrue ? '+' : '-'}${mobileNumber(amount, 0)} ${mt('bonusShort')}</div>`;
+      return `<div class="tx-item">
+        <div class="tx-ico ${iconClass}">${ico}</div>
+        <div class="tx-info">
+          <div class="tx-title">${types[t.type] || t.type}</div>
+          <div class="tx-date">${t.ts ? mobileDateTime(t.ts,{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : mt('noDate')}</div>
+          <div class="tx-meta">${metaText}</div>
+        </div>
+        ${amountHtml}
+      </div>`;
+    }).join('') + '</div>';
+  }
+
+  async function loadNews(force = false) {
+    if (newsLoaded && !force) {
+      renderNews();
+      if (document.getElementById('tab-news')?.classList.contains('active')) markNewsAsSeen();
+      return;
+    }
+
+    const container = document.getElementById('news-container');
+    container.innerHTML = '<div class="qr-loader" style="margin:40px auto;"></div>';
+
+    const { ok, data, fromCache } = await apiGet('/api/mobile/news', { cacheKey: 'news' });
+    if (!ok) {
+      container.innerHTML = `<div class="tx-empty">${navigator.onLine ? mt('newsLoadError') : mt('offlineNoCache')}</div>`;
+      return;
+    }
+
+    newsItems = Array.isArray(data) ? data : [];
+    newsLoaded = true;
+    renderNews();
+    if (fromCache) {
+      container.insertAdjacentHTML('afterbegin', `<div class="fuel-updated">${mt('offlineCachedData')}</div>`);
+    }
+    updateNewsBadges();
+    if (document.getElementById('tab-news')?.classList.contains('active')) markNewsAsSeen();
+  }
+
+  async function loadRules() {
+    if (rulesLoaded) return;
+    const { ok, data, fromCache } = await apiGet('/api/mobile/rules', { cacheKey: 'rules' });
+    if (!ok) return;
+    rulesLoaded = true;
+    const c = document.getElementById('rules-container');
+    if (!data || !data.length) { c.innerHTML = `<div class="tx-empty">${mt('rulesEmpty')}</div>`; return; }
+    const loc = { fuel: mt('locFuel'), base: mt('locBase') };
+    const lvl = { bronze: mt('levelBronze'), silver: mt('levelSilver'), gold: mt('levelGold'), null: mt('allLevels') };
+    const typ = { percent: mt('typePercent'), bonus_per_liter: mt('typeLiter'), fixed: mt('typeFixed') };
+    c.innerHTML = (fromCache ? `<div class="fuel-updated">${mt('offlineCachedData')}</div>` : '') + '<div class="rules-list">' + data.map(r => `
+      <div class="rule-card">
+        <div class="rule-head">
+          <span class="rule-badge ${r.location==='fuel'?'rb-fuel':'rb-base'}">${loc[r.location]||r.location}</span>
+          <span style="font-size:12px;color:var(--muted)">${mt('until')} ${r.active_to||'∞'}</span>
+        </div>
+        <div class="rule-value">${parseFloat(r.accrual_value)} <span>${typ[r.accrual_type]||r.accrual_type}</span></div>
+        <div class="rule-meta">
+          ${r.client_level ? `<span class="rule-tag">${lvl[r.client_level]||r.client_level}</span>` : `<span class="rule-tag">${mt('allLevels')}</span>`}
+          ${r.min_purchase>0 ? `<span class="rule-tag">${mt('from')} ${mobileMoney(parseFloat(r.min_purchase), 0)}</span>` : ''}
+          ${r.active_from ? `<span class="rule-tag">${mt('from')} ${r.active_from}</span>` : ''}
+        </div>
+      </div>`).join('') + '</div>';
+  }
+
+  // ---- NAVIGATION ----
+  function switchTab(name) {
+    document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.querySelector('[data-tab="' + name + '"]')?.classList.add('active');
+    if (name === 'qr') loadQR();
+    if (name === 'history') loadTx();
+    if (name === 'news') loadNews(true);
+    if (name === 'rules') loadRules();
+    if (name === 'home' || name === 'profile') {
+      clientCard = null;
+      loadProfile(true);
+    }
+    if (name === 'home') loadFuelPrices();
+    window.scrollTo(0,0);
+  }
+
+  function logout() {
+    localStorage.removeItem('azs_token');
+    setMobileIdentity('guest');
+    token = null; profile = null; clientCard = null; qrLoaded = false; txLoaded = false; newsLoaded = false; newsItems = []; rulesLoaded = false; fuelLoading = false;
+    updateNewsBadges();
+    if (fuelTimer) { clearInterval(fuelTimer); fuelTimer = null; }
+    showAuthStep('step-phone');
+    document.getElementById('inp-phone').value = '';
+    document.getElementById('inp-password').value = '';
+    document.getElementById('inp-code').value = '';
+    document.getElementById('inp-new-password').value = '';
+    document.getElementById('inp-confirm-password').value = '';
+    document.getElementById('inp-reset-code').value = '';
+    document.getElementById('inp-reset-password').value = '';
+    document.getElementById('inp-reset-password-confirm').value = '';
+    document.getElementById('stub-hint').innerHTML = '';
+    document.getElementById('reset-stub-hint').innerHTML = '';
+    document.getElementById('screen-app').classList.remove('active');
+    document.getElementById('screen-login').classList.add('active');
+  }
+
+  // Auto-login if token saved
+  setMobileIdentity(getStoredMobileIdentity());
+  applyMobileLocale();
+  window.addEventListener('azs:offline-queued', () => {
+    toast(mt('offlineCachedData'), 'warning');
+  });
+  window.addEventListener('azs:offline-queue-flushed', () => {
+    toast(mt('offlineBackOnline'), 'success');
+    if (token) {
+      clientCard = null;
+      loadProfile(true);
+      loadFuelPrices();
+      loadNews(true);
+      rulesLoaded = false;
+      loadRules();
+    }
+  });
+  window.addEventListener('offline', () => {
+    offlineToast('offlineCachedData');
+  });
+  window.addEventListener('online', () => {
+    toast(mt('offlineBackOnline'), 'success');
+    if (token) {
+      clientCard = null;
+      loadProfile(true);
+      loadFuelPrices();
+      loadNews(true);
+      rulesLoaded = false;
+    }
+  });
+  if (token) { enterApp(); }
+</script>
+</body>
+</html>

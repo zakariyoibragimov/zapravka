@@ -1,0 +1,640 @@
+{% extends "base.html" %}
+{% block title %}Правила бонусов — АЗС Бонус{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Карточка правила ─────────────────────────────────────── */
+  .rule-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.07);
+    padding: 1.2rem 1.4rem;
+    transition: box-shadow .18s;
+    border-left: 5px solid transparent;
+  }
+  .rule-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,.11); }
+  .rule-card.loc-fuel  { border-left-color: #0d6efd; }
+  .rule-card.loc-base  { border-left-color: #198754; }
+  .rule-card.is-expired { opacity: .55; }
+
+  .rule-value-big {
+    font-size: 2.6rem;
+    font-weight: 900;
+    line-height: 1;
+    color: #0d6efd;
+  }
+  .rule-card.loc-base .rule-value-big { color: #198754; }
+
+  .rule-desc { font-size: .95rem; color: #444; margin-top: .3rem; }
+  .rule-example { font-size: .8rem; color: #888; margin-top: .2rem; }
+
+  /* ── Колонки локаций ──────────────────────────────────────── */
+  .loc-header {
+    display: flex; align-items: center; gap: .6rem;
+    font-weight: 700; font-size: 1rem;
+    text-transform: uppercase; letter-spacing: .06em;
+    margin-bottom: .9rem; padding-bottom: .6rem;
+    border-bottom: 2px solid #e9ecef;
+  }
+
+  /* ── Превью в модалке ─────────────────────────────────────── */
+  .preview-box {
+    background: #f0f7ff;
+    border-radius: 10px;
+    padding: .75rem 1rem;
+    font-size: .9rem;
+    border: 1.5px solid #cce0ff;
+    min-height: 52px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Заголовок -->
+<div class="d-flex align-items-start justify-content-between mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">
+      <i class="bi bi-percent me-2 text-primary"></i><span id="rulesPageTitle">Правила начисления бонусов</span>
+    </h4>
+    <div class="text-muted small" id="rulesPageSubtitle">
+      Задайте сколько бонусов клиент получает за покупку на АЗС или в магазине
+    </div>
+  </div>
+  <button class="btn btn-primary rounded-3 px-4 fw-semibold" onclick="openAddModal()">
+    <i class="bi bi-plus-lg me-1"></i><span id="rulesAddBtnText">Добавить правило</span>
+  </button>
+</div>
+
+<!-- Подсказка -->
+<div class="alert d-flex gap-3 align-items-start py-3 mb-4" style="border-radius:12px;border:none;background:#e8f4fd">
+  <i class="bi bi-lightbulb-fill text-info fs-5 mt-1 flex-shrink-0"></i>
+  <div class="small" id="rulesHintText">
+    <b>Как это работает:</b> при проведении чека система ищет подходящее <b>активное</b> правило для данной локации.
+    Если подходит несколько правил, используется самое новое активное правило.
+    Тип <b>«% от чека»</b> — начисляет процент от суммы покупки.
+    Тип <b>«Бонус/литр»</b> — только для АЗС, начисляет бонусы за каждый литр.
+    Тип <b>«Фиксировано»</b> — фиксированное количество бонусов за любой подходящий чек.
+  </div>
+</div>
+
+<!-- Две колонки: АЗС и Магазин -->
+<div class="row g-4">
+
+  <!-- АЗС -->
+  <div class="col-xl-6">
+    <div class="loc-header">
+      <span style="font-size:1.3rem">⛽</span>
+      <span class="text-primary" id="rulesFuelLabel">АЗС</span>
+      <span id="fuelCount" class="badge bg-primary bg-opacity-15 text-primary fw-semibold ms-1" style="font-size:.75rem">0</span>
+    </div>
+    <div id="fuelRules"></div>
+  </div>
+
+  <!-- Магазин -->
+  <div class="col-xl-6">
+    <div class="loc-header">
+      <span style="font-size:1.3rem">🏪</span>
+      <span class="text-success" id="rulesBaseLabel">Магазин</span>
+      <span id="baseCount" class="badge bg-success bg-opacity-15 text-success fw-semibold ms-1" style="font-size:.75rem">0</span>
+    </div>
+    <div id="baseRules"></div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     МОДАЛКА: Добавить / Редактировать правило
+═══════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="ruleModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:520px">
+    <div class="modal-content" style="border-radius:18px;overflow:hidden">
+
+      <div class="modal-header border-0 pb-0 px-4 pt-4">
+        <h5 class="modal-title fw-bold" id="ruleModalTitle">
+          <i class="bi bi-plus-circle-fill me-2 text-primary"></i>Новое правило
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form id="ruleForm">
+        <div class="modal-body px-4 py-3">
+          <input type="hidden" id="editRuleId" value="">
+
+          <!-- Локация -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold small" id="rulesLocationLabel">Где применяется</label>
+            <div class="d-flex gap-2">
+              <input type="radio" class="btn-check" name="location" id="locFuelRadio" value="fuel" checked>
+              <label class="btn btn-outline-primary flex-fill" for="locFuelRadio" id="rulesLocationFuel">
+                ⛽ АЗС
+              </label>
+              <input type="radio" class="btn-check" name="location" id="locBaseRadio" value="base">
+              <label class="btn btn-outline-success flex-fill" for="locBaseRadio" id="rulesLocationBase">
+                🏪 Магазин
+              </label>
+            </div>
+          </div>
+
+          <!-- Тип начисления -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold small" id="rulesTypeLabel">Тип начисления</label>
+            <select id="mAccrualType" class="form-select">
+              <option value="percent" id="rulesTypePercent">% от суммы чека</option>
+              <option value="bonus_per_liter" id="rulesTypeLiter">Бонусов за каждый литр</option>
+              <option value="fixed" id="rulesTypeFixed">Фиксированная сумма бонусов</option>
+            </select>
+          </div>
+
+          <!-- Значение -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold small" id="mValueLabel">Процент (%)</label>
+            <div class="input-group">
+              <input type="number" id="mAccrualValue" class="form-control form-control-lg fw-bold"
+                     step="0.0001" min="0.0001" required
+                     style="font-size:1.4rem;text-align:right"
+                     placeholder="0">
+              <span class="input-group-text fw-semibold" id="mValueUnit">%</span>
+            </div>
+          </div>
+
+          <!-- Превью -->
+          <div class="preview-box mb-3" id="mPreview">
+            <i class="bi bi-calculator me-1 text-muted"></i>
+            <span class="text-muted" id="rulesPreviewPlaceholder">Введите значение для предпросмотра</span>
+          </div>
+
+          <!-- Мин. сумма -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold" id="rulesMinPurchaseLabel">
+              Минимальная сумма чека (₽)
+              <span class="text-muted fw-normal ms-1" id="rulesMinPurchaseHint">— правило не сработает ниже этой суммы</span>
+            </label>
+            <input type="number" id="mMinPurchase" class="form-control" step="0.01" min="0"
+                   value="0" placeholder="0 = без ограничения">
+          </div>
+
+          <!-- Даты -->
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label small fw-semibold" id="rulesFromLabel">
+                Действует с <span class="text-danger">*</span>
+              </label>
+              <input type="date" id="mActiveFrom" class="form-control" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-semibold text-muted" id="rulesToLabel">До (необязательно)</label>
+              <input type="date" id="mActiveTo" class="form-control">
+              <div class="form-text" id="rulesToHint">Пусто = бессрочно</div>
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer border-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal" id="rulesCancelBtn">Отмена</button>
+          <button type="submit" class="btn btn-primary rounded-3 px-4 fw-semibold" id="ruleSubmitBtn">
+            <i class="bi bi-check-lg me-1"></i>Сохранить
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+'use strict';
+
+const RULES_TEXTS = {
+  ru: {
+    pageTitle: 'Правила начисления бонусов', pageSubtitle: 'Задайте сколько бонусов клиент получает за покупку на АЗС или в магазине', addRule: 'Добавить правило',
+    hint: '<b>Как это работает:</b> при проведении чека система ищет подходящее <b>активное</b> правило для данной локации. Если подходит несколько правил, используется самое новое активное правило. Тип <b>«% от чека»</b> — начисляет процент от суммы покупки. Тип <b>«Бонус/литр»</b> — только для АЗС, начисляет бонусы за каждый литр. Тип <b>«Фиксировано»</b> — фиксированное количество бонусов за любой подходящий чек.',
+    fuel: 'АЗС', base: 'Магазин', newRule: 'Новое правило', editRule: 'Редактировать правило', location: 'Где применяется', type: 'Тип начисления',
+    typePercent: '% от суммы чека', typeLiter: 'Бонусов за каждый литр', typeFixed: 'Фиксированная сумма бонусов', percentLabel: 'Процент начисления (%)',
+    literLabel: 'Бонусов за 1 литр', fixedLabel: 'Количество бонусов', unitPercent: '%', unitLiter: 'бонус/л', unitBonus: 'бонусов',
+    previewPlaceholder: 'Введите значение для предпросмотра', minPurchaseLabel: 'Минимальная сумма чека ({symbol})', minPurchaseHint: '— правило не сработает ниже этой суммы',
+    fromLabel: 'Действует с', toLabel: 'До (необязательно)', toHint: 'Пусто = бессрочно', cancel: 'Отмена', save: 'Сохранить', saveChanges: 'Сохранить изменения',
+    loadingError: 'Ошибка загрузки правил', noRulesFor: 'Нет правил для {label} — нажмите «Добавить правило»', expired: 'Истекло', planned: 'Запланировано', active: 'Активно',
+    minCheck: 'мин. чек {amount}', fromDate: 'с {date}', fromTo: '{from} — {to}', editTitle: 'Редактировать', deleteTitle: 'Удалить',
+    percentDesc: 'от суммы чека начисляется бонусами', literDesc: 'бонус за каждый литр топлива', fixedDesc: 'фиксированных бонусов за каждый чек',
+    exPercent: 'За {a} → {b} бонусов · за {c} → {d} бонусов', exLiter: 'За 10 л → {a} бонусов · за 40 л → {b} бонусов', exFixed: 'Каждый чек{minStr} приносит ровно {value} бонусов',
+    previewPercent: 'За <b>{a}</b> → <b class="text-primary">{b} бонусов</b><br>За <b>{c}</b> → <b class="text-primary">{d} бонусов</b>',
+    previewLiter: 'За <b>10 литров</b> → <b class="text-primary">{a} бонусов</b><br>За <b>40 литров</b> → <b class="text-primary">{b} бонусов</b>',
+    previewFixed: 'За любой подходящий чек: ровно <b class="text-primary">{value} бонусов</b>', added: 'Правило добавлено ✓', updated: 'Правило обновлено ✓', saveError: 'Ошибка сохранения', connectionError: 'Ошибка соединения',
+    deleteConfirm: 'Удалить правило «{desc}»?\n\nЭто действие нельзя отменить.', deleted: 'Правило удалено', deleteError: 'Ошибка удаления'
+  },
+  en: {
+    pageTitle: 'Bonus Accrual Rules', pageSubtitle: 'Set how many bonuses a client gets for purchases at the station or in the store', addRule: 'Add rule',
+    hint: '<b>How it works:</b> when a receipt is processed, the system looks for a matching <b>active</b> rule for that location. If several rules match, the newest active rule is used. <b>% of receipt</b> accrues a percentage of the purchase amount. <b>Bonus/liter</b> works only for fuel and accrues bonuses for each liter. <b>Fixed</b> gives a fixed amount of bonuses for any matching receipt.',
+    fuel: 'Station', base: 'Store', newRule: 'New rule', editRule: 'Edit rule', location: 'Where it applies', type: 'Accrual type',
+    typePercent: '% of receipt amount', typeLiter: 'Bonuses for each liter', typeFixed: 'Fixed bonus amount', percentLabel: 'Accrual percent (%)',
+    literLabel: 'Bonuses per 1 liter', fixedLabel: 'Bonus amount', unitPercent: '%', unitLiter: 'bonus/l', unitBonus: 'bonuses',
+    previewPlaceholder: 'Enter a value for preview', minPurchaseLabel: 'Minimum receipt amount ({symbol})', minPurchaseHint: '— the rule will not work below this amount',
+    fromLabel: 'Active from', toLabel: 'Until (optional)', toHint: 'Empty = unlimited', cancel: 'Cancel', save: 'Save', saveChanges: 'Save changes',
+    loadingError: 'Failed to load rules', noRulesFor: 'No rules for {label} — click "Add rule"', expired: 'Expired', planned: 'Planned', active: 'Active',
+    minCheck: 'min. receipt {amount}', fromDate: 'from {date}', fromTo: '{from} — {to}', editTitle: 'Edit', deleteTitle: 'Delete',
+    percentDesc: 'of the receipt amount is accrued as bonuses', literDesc: 'bonus for each liter of fuel', fixedDesc: 'fixed bonuses for each receipt',
+    exPercent: 'For {a} → {b} bonuses · for {c} → {d} bonuses', exLiter: 'For 10 l → {a} bonuses · for 40 l → {b} bonuses', exFixed: 'Each matching receipt{minStr} gives exactly {value} bonuses',
+    previewPercent: 'For <b>{a}</b> → <b class="text-primary">{b} bonuses</b><br>For <b>{c}</b> → <b class="text-primary">{d} bonuses</b>',
+    previewLiter: 'For <b>10 liters</b> → <b class="text-primary">{a} bonuses</b><br>For <b>40 liters</b> → <b class="text-primary">{b} bonuses</b>',
+    previewFixed: 'For any matching receipt: exactly <b class="text-primary">{value} bonuses</b>', added: 'Rule added ✓', updated: 'Rule updated ✓', saveError: 'Save error', connectionError: 'Connection error',
+    deleteConfirm: 'Delete rule "{desc}"?\n\nThis action cannot be undone.', deleted: 'Rule deleted', deleteError: 'Delete error'
+  },
+  tg: {
+    pageTitle: 'Қоидаҳои ҳисобкунии бонус', pageSubtitle: 'Муайян кунед, ки мизоҷ барои харид дар АЗС ё мағоза чанд бонус мегирад', addRule: 'Иловаи қоида',
+    hint: '<b>Чӣ гуна кор мекунад:</b> ҳангоми гузаронидани чек, система қоидаи мувофиқи <b>фаъол</b>-ро барои ин макон меҷӯяд. Агар якчанд қоида мувофиқ бошанд, қоидаи фаъоли навтарин истифода мешавад. Навъи <b>% аз чек</b> фоизро аз маблағи харид ҳисоб мекунад. <b>Бонус/литр</b> танҳо барои сӯзишворӣ аст ва барои ҳар литр бонус медиҳад. <b>Собит</b> барои ҳар чеки мувофиқ миқдори собити бонус медиҳад.',
+    fuel: 'АЗС', base: 'Мағоза', newRule: 'Қоидаи нав', editRule: 'Тағйири қоида', location: 'Дар куҷо истифода мешавад', type: 'Навъи ҳисобкунӣ',
+    typePercent: '% аз маблағи чек', typeLiter: 'Бонус барои ҳар литр', typeFixed: 'Маблағи собити бонус', percentLabel: 'Фоизи ҳисобкунӣ (%)',
+    literLabel: 'Бонус барои 1 литр', fixedLabel: 'Миқдори бонус', unitPercent: '%', unitLiter: 'бонус/л', unitBonus: 'бонус',
+    previewPlaceholder: 'Барои пешнамоиш қиматро ворид кунед', minPurchaseLabel: 'Ҳадди ақали маблағи чек ({symbol})', minPurchaseHint: '— қоида аз ин маблағ камтар кор намекунад',
+    fromLabel: 'Эътибор аз', toLabel: 'То (ихтиёрӣ)', toHint: 'Холӣ = бемуҳлат', cancel: 'Бекор кардан', save: 'Сабт кардан', saveChanges: 'Сабти тағйирот',
+    loadingError: 'Боркунии қоидаҳо иҷро нашуд', noRulesFor: 'Барои {label} қоида нест — «Иловаи қоида»-ро пахш кунед', expired: 'Анҷом ёфт', planned: 'Банақшагирифта', active: 'Фаъол',
+    minCheck: 'чеки ҳадди ақал {amount}', fromDate: 'аз {date}', fromTo: '{from} — {to}', editTitle: 'Тағйир додан', deleteTitle: 'Нест кардан',
+    percentDesc: 'аз маблағи чек ҳамчун бонус ҳисоб мешавад', literDesc: 'бонус барои ҳар литри сӯзишворӣ', fixedDesc: 'бонуси собит барои ҳар чек',
+    exPercent: 'Барои {a} → {b} бонус · барои {c} → {d} бонус', exLiter: 'Барои 10 л → {a} бонус · барои 40 л → {b} бонус', exFixed: 'Ҳар чеки мувофиқ{minStr} дақиқан {value} бонус медиҳад',
+    previewPercent: 'Барои <b>{a}</b> → <b class="text-primary">{b} бонус</b><br>Барои <b>{c}</b> → <b class="text-primary">{d} бонус</b>',
+    previewLiter: 'Барои <b>10 литр</b> → <b class="text-primary">{a} бонус</b><br>Барои <b>40 литр</b> → <b class="text-primary">{b} бонус</b>',
+    previewFixed: 'Барои ҳар чеки мувофиқ: дақиқан <b class="text-primary">{value} бонус</b>', added: 'Қоида илова шуд ✓', updated: 'Қоида нав шуд ✓', saveError: 'Хатои сабт', connectionError: 'Хатои пайвастшавӣ',
+    deleteConfirm: 'Қоидаи «{desc}»-ро нест кунед?\n\nИн амал баргардонда намешавад.', deleted: 'Қоида нест шуд', deleteError: 'Хатои несткунӣ'
+  }
+};
+
+function rulesText(key, replacements = {}) {
+  const lang = window.appI18n?.getCurrentLanguage?.() || 'ru';
+  let value = (RULES_TEXTS[lang] && RULES_TEXTS[lang][key]) || RULES_TEXTS.ru[key] || key;
+  for (const [name, replacement] of Object.entries(replacements)) {
+    value = value.replaceAll(`{${name}}`, replacement);
+  }
+  return value;
+}
+
+function rulesMoney(value, digits = 0) {
+  return window.appI18n?.formatMoney ? window.appI18n.formatMoney(value, digits) : `${Number(value).toFixed(digits)} ₽`;
+}
+
+function rulesDate(value) {
+  if (!value) return '∞';
+  return new Date(`${value}T00:00:00`).toLocaleDateString(window.appI18n?.getCurrentLocale?.() || 'ru-RU');
+}
+
+function formatRuleNumber(value) {
+  const num = parseFloat(value);
+  return Number.isInteger(num) ? String(num) : num.toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9]*)0+$/, '$1');
+}
+
+function amountDigits(value) {
+  return Number.isInteger(Number(value)) ? 0 : 2;
+}
+
+function percentPreviewAmounts(minPurchaseValue) {
+  const minPurchase = parseFloat(minPurchaseValue) || 0;
+  const firstAmount = minPurchase > 0 ? minPurchase : 1000;
+  const secondAmount = firstAmount * 5;
+  return { firstAmount, secondAmount };
+}
+
+function applyRulesLocale() {
+  const symbol = window.appI18n?.getCurrencySymbol?.() || '₽';
+  document.getElementById('rulesPageTitle').textContent = rulesText('pageTitle');
+  document.getElementById('rulesPageSubtitle').textContent = rulesText('pageSubtitle');
+  document.getElementById('rulesAddBtnText').textContent = rulesText('addRule');
+  document.getElementById('rulesHintText').innerHTML = rulesText('hint');
+  document.getElementById('rulesFuelLabel').textContent = rulesText('fuel');
+  document.getElementById('rulesBaseLabel').textContent = rulesText('base');
+  document.getElementById('rulesLocationLabel').textContent = rulesText('location');
+  document.getElementById('rulesLocationFuel').innerHTML = `⛽ ${rulesText('fuel')}`;
+  document.getElementById('rulesLocationBase').innerHTML = `🏪 ${rulesText('base')}`;
+  document.getElementById('rulesTypeLabel').textContent = rulesText('type');
+  document.getElementById('rulesTypePercent').textContent = rulesText('typePercent');
+  document.getElementById('rulesTypeLiter').textContent = rulesText('typeLiter');
+  document.getElementById('rulesTypeFixed').textContent = rulesText('typeFixed');
+  document.getElementById('rulesPreviewPlaceholder').textContent = rulesText('previewPlaceholder');
+  document.getElementById('rulesMinPurchaseLabel').childNodes[0].textContent = `${rulesText('minPurchaseLabel', { symbol })} `;
+  document.getElementById('rulesMinPurchaseHint').textContent = rulesText('minPurchaseHint');
+  document.getElementById('rulesFromLabel').childNodes[0].textContent = `${rulesText('fromLabel')} `;
+  document.getElementById('rulesToLabel').textContent = rulesText('toLabel');
+  document.getElementById('rulesToHint').textContent = rulesText('toHint');
+  document.getElementById('rulesCancelBtn').textContent = rulesText('cancel');
+  updateTypeUI();
+}
+
+let allRules = [];
+
+// ── Загрузка при старте ────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  applyRulesLocale();
+  loadRules();
+  document.getElementById('mActiveFrom').value = new Date().toISOString().slice(0,10);
+  document.getElementById('mAccrualType').addEventListener('change', updateTypeUI);
+  document.getElementById('mAccrualValue').addEventListener('input', updatePreview);
+  document.getElementById('mMinPurchase').addEventListener('input', updatePreview);
+  updateTypeUI();
+});
+
+// ── Загрузить правила с API ────────────────────────────────────────────────
+async function loadRules() {
+  try {
+    const r = await fetch('/api/admin/rules', {
+      offlineAuth: 'admin',
+      offlineCacheKey: 'admin_rules_list',
+      offlineCacheScope: 'admin',
+    });
+    if (!r.ok) throw new Error();
+    allRules = await r.json();
+    if (window.AZSOffline?.isCachedResponse(r)) {
+      showToast('Связь слабая. Показаны последние сохраненные правила', 'warning');
+    }
+    renderAll();
+  } catch {
+    showToast(rulesText('loadingError'), 'danger');
+  }
+}
+
+// ── Рендер всех карточек ───────────────────────────────────────────────────
+function renderAll() {
+  const fuel = allRules.filter(r => r.location === 'fuel');
+  const base = allRules.filter(r => r.location === 'base');
+
+  document.getElementById('fuelCount').textContent = fuel.length;
+  document.getElementById('baseCount').textContent = base.length;
+
+  document.getElementById('fuelRules').innerHTML =
+    fuel.length ? fuel.map(ruleCard).join('') : emptyState(rulesText('fuel'));
+  document.getElementById('baseRules').innerHTML =
+    base.length ? base.map(ruleCard).join('') : emptyState(rulesText('base'));
+}
+
+function emptyState(label) {
+  return `<div class="text-center text-muted py-4 small">
+    <i class="bi bi-plus-circle fs-3 d-block mb-2 opacity-30"></i>
+    ${rulesText('noRulesFor', { label })}
+  </div>`;
+}
+
+// ── Карточка одного правила ────────────────────────────────────────────────
+function ruleCard(r) {
+  const today = new Date().toISOString().slice(0,10);
+  const from  = r.active_from;
+  const to    = r.active_to;
+
+  let status, statusClass;
+  if (to && to < today) {
+    status = `<i class="bi bi-clock-history me-1"></i>${rulesText('expired')}`;
+    statusClass = 'bg-secondary text-white';
+  } else if (from > today) {
+    status = `<i class="bi bi-calendar-event me-1"></i>${rulesText('planned')}`;
+    statusClass = 'bg-warning text-dark';
+  } else {
+    status = `<i class="bi bi-check-circle-fill me-1"></i>${rulesText('active')}`;
+    statusClass = 'bg-success text-white';
+  }
+
+  const expired  = (to && to < today);
+  const locClass = r.location === 'fuel' ? 'loc-fuel' : 'loc-base';
+  const { big, desc, example } = ruleDisplay(r);
+
+  const minStr = parseFloat(r.min_purchase) > 0
+    ? `<span class="badge bg-light text-muted border ms-2">${rulesText('minCheck', { amount: rulesMoney(parseFloat(r.min_purchase), 0) })}</span>`
+    : '';
+
+  const dateStr = to
+    ? rulesText('fromTo', { from: formatDate(from), to: formatDate(to) })
+    : rulesText('fromDate', { date: formatDate(from) });
+
+  return `
+  <div class="rule-card ${locClass} ${expired ? 'is-expired' : ''} mb-3">
+    <div class="d-flex align-items-start justify-content-between gap-2">
+      <div class="flex-grow-1">
+        <div class="rule-value-big">${big}</div>
+        <div class="rule-desc">${desc}${minStr}</div>
+        <div class="rule-example text-muted">${example}</div>
+      </div>
+      <div class="d-flex flex-column align-items-end gap-2 flex-shrink-0">
+        <span class="badge ${statusClass} rounded-pill px-2 py-1" style="font-size:.75rem">${status}</span>
+        <div class="d-flex gap-1 mt-auto">
+          <button class="btn btn-sm btn-outline-primary rounded-3 px-2" onclick="openEditModal(${r.id})" title="${rulesText('editTitle')}">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-danger rounded-3 px-2" onclick="deleteRule(${r.id})" title="${rulesText('deleteTitle')}">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="text-muted mt-2" style="font-size:.75rem">
+      <i class="bi bi-calendar2-range me-1"></i>${dateStr}
+      <span class="ms-3 opacity-50">#${r.id}</span>
+    </div>
+  </div>`;
+}
+
+// ── Человекочитаемое описание ──────────────────────────────────────────────
+function ruleDisplay(r) {
+  const val = parseFloat(r.accrual_value);
+  let big, desc, example;
+
+  if (r.accrual_type === 'percent') {
+    const { firstAmount, secondAmount } = percentPreviewAmounts(r.min_purchase);
+    big = formatRuleNumber(val) + '%';
+    desc = rulesText('percentDesc');
+    example = rulesText('exPercent', {
+      a: rulesMoney(firstAmount, amountDigits(firstAmount)),
+      b: formatRuleNumber(firstAmount * val / 100),
+      c: rulesMoney(secondAmount, amountDigits(secondAmount)),
+      d: formatRuleNumber(secondAmount * val / 100),
+    });
+  } else if (r.accrual_type === 'bonus_per_liter') {
+    big = formatRuleNumber(val);
+    desc = rulesText('literDesc');
+    example = rulesText('exLiter', {
+      a: formatRuleNumber(val * 10),
+      b: formatRuleNumber(val * 40),
+    });
+  } else {
+    big = formatRuleNumber(val);
+    desc = rulesText('fixedDesc');
+    const minStr = parseFloat(r.min_purchase) > 0
+      ? ` ${rulesMoney(parseFloat(r.min_purchase), 0)}` : '';
+    example = rulesText('exFixed', { minStr, value: formatRuleNumber(val) });
+  }
+  return { big, desc, example };
+}
+
+function formatDate(d) {
+  return rulesDate(d);
+}
+
+// ── Обновить UI типа в модалке ─────────────────────────────────────────────
+function updateTypeUI() {
+  const type = document.getElementById('mAccrualType').value;
+  const label = document.getElementById('mValueLabel');
+  const unit  = document.getElementById('mValueUnit');
+  if (type === 'percent') {
+    label.textContent = rulesText('percentLabel');
+    unit.textContent  = rulesText('unitPercent');
+  } else if (type === 'bonus_per_liter') {
+    label.textContent = rulesText('literLabel');
+    unit.textContent  = rulesText('unitLiter');
+  } else {
+    label.textContent = rulesText('fixedLabel');
+    unit.textContent  = rulesText('unitBonus');
+  }
+  updatePreview();
+}
+
+function updatePreview() {
+  const type = document.getElementById('mAccrualType').value;
+  const val  = parseFloat(document.getElementById('mAccrualValue').value) || 0;
+  const minPurchase = parseFloat(document.getElementById('mMinPurchase').value) || 0;
+  const box  = document.getElementById('mPreview');
+  if (!val) {
+    box.innerHTML = `<i class="bi bi-calculator me-1 text-muted"></i><span class="text-muted">${rulesText('previewPlaceholder')}</span>`;
+    return;
+  }
+  let html;
+  if (type === 'percent') {
+    const { firstAmount, secondAmount } = percentPreviewAmounts(minPurchase);
+    html = `<i class="bi bi-calculator-fill me-1 text-primary"></i>${rulesText('previewPercent', {
+      a: rulesMoney(firstAmount, amountDigits(firstAmount)),
+      b: formatRuleNumber(firstAmount * val / 100),
+      c: rulesMoney(secondAmount, amountDigits(secondAmount)),
+      d: formatRuleNumber(secondAmount * val / 100),
+    })}`;
+  } else if (type === 'bonus_per_liter') {
+    html = `<i class="bi bi-calculator-fill me-1 text-primary"></i>${rulesText('previewLiter', {
+      a: formatRuleNumber(val * 10),
+      b: formatRuleNumber(val * 40),
+    })}`;
+  } else {
+    html = `<i class="bi bi-calculator-fill me-1 text-primary"></i>${rulesText('previewFixed', { value: formatRuleNumber(val) })}`;
+  }
+  box.innerHTML = html;
+}
+
+// ── Открыть модалку добавления ─────────────────────────────────────────────
+function openAddModal() {
+  document.getElementById('ruleModalTitle').innerHTML =
+    `<i class="bi bi-plus-circle-fill me-2 text-primary"></i>${rulesText('newRule')}`;
+  document.getElementById('ruleSubmitBtn').innerHTML =
+    `<i class="bi bi-check-lg me-1"></i>${rulesText('addRule')}`;
+  document.getElementById('editRuleId').value = '';
+  document.getElementById('ruleForm').reset();
+  document.getElementById('mActiveFrom').value = new Date().toISOString().slice(0,10);
+  document.getElementById('locFuelRadio').checked = true;
+  updateTypeUI();
+  new bootstrap.Modal(document.getElementById('ruleModal')).show();
+}
+
+// ── Открыть модалку редактирования ────────────────────────────────────────
+function openEditModal(id) {
+  const r = allRules.find(x => x.id === id);
+  if (!r) return;
+  document.getElementById('ruleModalTitle').innerHTML =
+    `<i class="bi bi-pencil-fill me-2 text-warning"></i>${rulesText('editRule')}`;
+  document.getElementById('ruleSubmitBtn').innerHTML =
+    `<i class="bi bi-check-lg me-1"></i>${rulesText('saveChanges')}`;
+  document.getElementById('editRuleId').value = id;
+  document.getElementById(r.location === 'fuel' ? 'locFuelRadio' : 'locBaseRadio').checked = true;
+  document.getElementById('mAccrualType').value  = r.accrual_type;
+  document.getElementById('mAccrualValue').value = parseFloat(r.accrual_value);
+  document.getElementById('mMinPurchase').value  = parseFloat(r.min_purchase);
+  document.getElementById('mActiveFrom').value   = r.active_from;
+  document.getElementById('mActiveTo').value     = r.active_to || '';
+  updateTypeUI();
+  new bootstrap.Modal(document.getElementById('ruleModal')).show();
+}
+
+// ── Сохранить (добавить / обновить) ───────────────────────────────────────
+document.getElementById('ruleForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('ruleSubmitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Сохранение...';
+
+  const editId   = document.getElementById('editRuleId').value;
+  const location = document.querySelector('input[name="location"]:checked').value;
+  const payload  = {
+    location,
+    accrual_type:  document.getElementById('mAccrualType').value,
+    accrual_value: parseFloat(document.getElementById('mAccrualValue').value),
+    min_purchase:  parseFloat(document.getElementById('mMinPurchase').value) || 0,
+    active_from:   document.getElementById('mActiveFrom').value,
+  };
+  const activeTo = document.getElementById('mActiveTo').value;
+  if (activeTo) payload.active_to = activeTo;
+
+  try {
+    const res = await fetch(editId ? `/api/admin/rules/${editId}` : '/api/admin/rules', {
+      method: editId ? 'PUT' : 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+      offlineAuth: 'admin',
+      offlineQueue: true,
+      offlineQueueScope: 'admin',
+      offlineInvalidateCacheKeys: ['admin_rules_list'],
+      offlineReplayLabel: editId ? 'admin-rules-update' : 'admin-rules-create',
+    });
+    if (window.AZSOffline?.isQueuedResponse(res)) {
+      bootstrap.Modal.getInstance(document.getElementById('ruleModal'))?.hide();
+      showToast('Изменение правила поставлено в очередь', 'warning');
+      return;
+    }
+    if (res.ok) {
+      bootstrap.Modal.getInstance(document.getElementById('ruleModal'))?.hide();
+      showToast(editId ? rulesText('updated') : rulesText('added'), 'success');
+      await loadRules();
+    } else {
+      const d = await res.json();
+      showToast(d.detail || rulesText('saveError'), 'danger');
+    }
+  } catch {
+    showToast(rulesText('connectionError'), 'danger');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<i class="bi bi-check-lg me-1"></i>${rulesText('save')}`;
+  }
+});
+
+// ── Удалить правило ────────────────────────────────────────────────────────
+async function deleteRule(id) {
+  const r = allRules.find(x => x.id === id);
+  const { desc } = ruleDisplay(r);
+  if (!confirm(rulesText('deleteConfirm', { desc }))) return;
+  try {
+    const res = await fetch(`/api/admin/rules/${id}`, {
+      method: 'DELETE',
+      offlineAuth: 'admin',
+      offlineQueue: true,
+      offlineQueueScope: 'admin',
+      offlineInvalidateCacheKeys: ['admin_rules_list'],
+      offlineReplayLabel: 'admin-rules-delete',
+    });
+    if (window.AZSOffline?.isQueuedResponse(res)) {
+      showToast('Удаление правила поставлено в очередь', 'warning');
+      return;
+    }
+    if (res.ok) {
+      showToast(rulesText('deleted'), 'success');
+      await loadRules();
+    } else {
+      showToast(rulesText('deleteError'), 'danger');
+    }
+  } catch {
+    showToast(rulesText('connectionError'), 'danger');
+  }
+}
+
+window.addEventListener('app:locale-changed', () => {
+  applyRulesLocale();
+  renderAll();
+});
+
+window.addEventListener('azs:offline-queue-flushed', () => {
+  loadRules();
+});
+</script>
+{% endblock %}
+

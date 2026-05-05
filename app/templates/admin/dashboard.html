@@ -1,0 +1,845 @@
+{% extends "base.html" %}
+{% block title %}Дашборд — АЗС Бонус{% endblock %}
+{% block head %}
+<style>
+  .kpi-card { border-radius: 14px; border: none; overflow: hidden; }
+  .kpi-card .kpi-icon { width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0; }
+  .kpi-card .kpi-value { font-size: 1.9rem; font-weight: 800; line-height: 1.1; }
+  .kpi-card .kpi-label { font-size: .78rem; color: #6c757d; text-transform: uppercase; letter-spacing: .05em; }
+  .news-admin-card { border-radius: 18px; }
+  .news-admin-list { display: grid; gap: 12px; }
+  .news-admin-item { border: 1px solid rgba(13,110,253,.12); border-radius: 14px; padding: 14px 16px; background: linear-gradient(180deg, #fff, #f8fbff); }
+  .news-admin-title { font-size: 1rem; font-weight: 700; color: #1a1d21; margin-bottom: 4px; }
+  .news-admin-meta { font-size: .78rem; color: #6c757d; margin-bottom: 10px; }
+  .news-admin-body { color: #334155; line-height: 1.6; white-space: pre-wrap; }
+  .news-emoji-panel { border: 1px dashed rgba(13,110,253,.18); border-radius: 14px; padding: 12px; background: linear-gradient(180deg, #fbfdff, #f7fbff); }
+  .news-emoji-title { font-size: .78rem; color: #6c757d; margin-bottom: 8px; }
+  .news-emoji-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .news-emoji-btn { width: 38px; height: 38px; border-radius: 12px; border: 1px solid rgba(13,110,253,.14); background: #fff; display:flex; align-items:center; justify-content:center; font-size: 1.1rem; transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease; }
+  .news-emoji-btn:hover { transform: translateY(-1px); border-color: rgba(13,110,253,.28); box-shadow: 0 8px 18px rgba(13,110,253,.10); }
+  .news-admin-empty { border: 1px dashed rgba(108,117,125,.28); border-radius: 14px; padding: 18px; color: #6c757d; text-align: center; }
+  .suspicious-card { border-radius: 18px; border: none; }
+  .suspicious-list { display: grid; gap: 12px; }
+  .suspicious-item { border-radius: 16px; padding: 16px 18px; border: 1px solid rgba(148,163,184,.18); background: linear-gradient(180deg, #fff, #f8fafc); }
+  .suspicious-item.warning { border-color: rgba(245,158,11,.28); background: linear-gradient(180deg, #fffaf0, #fff7e8); }
+  .suspicious-item.danger { border-color: rgba(220,53,69,.2); background: linear-gradient(180deg, #fff5f5, #fff0f0); }
+  .suspicious-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:8px; }
+  .suspicious-title { font-size: 1rem; font-weight: 700; color:#1a1d21; }
+  .suspicious-meta { font-size: .8rem; color:#6c757d; }
+  .suspicious-examples { margin-top: 12px; display:grid; gap:8px; }
+  .suspicious-example { border-radius: 12px; background: rgba(255,255,255,.7); padding: 10px 12px; font-size: .82rem; color:#334155; }
+  .suspicious-empty { border: 1px dashed rgba(25,135,84,.24); border-radius: 16px; padding: 18px; color: #198754; text-align: center; background: #f2fbf6; }
+  .settings-card { border-radius: 18px; border: none; }
+  .settings-kpi { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; margin-bottom: 16px; }
+  .settings-kpi-card { border: 1px solid rgba(148,163,184,.18); border-radius: 14px; padding: 14px 16px; background: linear-gradient(180deg, #fff, #f8fafc); }
+  .settings-kpi-label { font-size: .75rem; color: #6c757d; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+  .settings-kpi-value { font-size: 1.1rem; font-weight: 700; color: #1f2937; }
+  .settings-note { border-radius: 14px; padding: 12px 14px; background: #f8fafc; border: 1px solid rgba(148,163,184,.18); color:#475569; font-size: .88rem; }
+  .settings-status { min-height: 20px; font-size: .85rem; color:#198754; }
+  .receipt-cancel-status { min-height: 20px; font-size: .85rem; color:#198754; white-space: pre-line; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-speedometer2 me-2 text-primary"></i><span data-i18n="dashboard_title">Дашборд</span></h1>
+  <div class="text-muted" data-i18n="dashboard_subtitle">Сводная статистика системы лояльности</div>
+</div>
+
+<!-- KPI -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-4">
+    <div class="card kpi-card shadow-sm p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="kpi-icon" style="background:#e8f0fe">
+          <i class="bi bi-people-fill text-primary"></i>
+        </div>
+        <div>
+          <div class="kpi-label" data-i18n="dashboard_clients">Клиентов</div>
+          <div class="kpi-value">{{ clients_count }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-4">
+    <div class="card kpi-card shadow-sm p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="kpi-icon" style="background:#e6f9f0">
+          <i class="bi bi-arrow-left-right text-success"></i>
+        </div>
+        <div>
+          <div class="kpi-label" data-i18n="dashboard_transactions">Транзакций</div>
+          <div class="kpi-value">{{ tx_count }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-4">
+    <div class="card kpi-card shadow-sm p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="kpi-icon" style="background:#fff8e1">
+          <i class="bi bi-star-fill text-warning"></i>
+        </div>
+        <div>
+          <div class="kpi-label" data-i18n="dashboard_bonus_issued">Бонусов выдано</div>
+          <div class="kpi-value">{{ total_bonus }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="card shadow-sm suspicious-card">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-3 gap-3">
+          <div>
+            <h6 class="mb-1 fw-bold">Подозрительные операции</h6>
+            <div class="text-muted small">Сигналы по отменам, чекам без клиента, ручным регистрациям и списанию бонусов</div>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-light text-muted border">Сегодня: <span id="suspiciousAlertsCount">0</span></span>
+            <button id="suspiciousAlertsReload" type="button" class="btn btn-outline-secondary btn-sm rounded-3">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+          </div>
+        </div>
+        <div id="suspiciousAlertsList" class="suspicious-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-xl-5 col-lg-6">
+    <div class="card shadow-sm settings-card h-100">
+      <div class="card-body">
+        <div class="mb-3">
+          <h6 class="mb-1 fw-bold">Срок сгорания бонусов</h6>
+          <div class="text-muted small">Здесь задаётся срок только для новых начислений. Уже выданные бонусы не пересчитываются автоматически.</div>
+        </div>
+        <div class="settings-kpi">
+          <div class="settings-kpi-card">
+            <div class="settings-kpi-label">Сейчас действует</div>
+            <div id="bonusExpiryCurrentValue" class="settings-kpi-value">—</div>
+          </div>
+          <div class="settings-kpi-card">
+            <div class="settings-kpi-label">Если начислить сегодня</div>
+            <div id="bonusExpiryPreviewValue" class="settings-kpi-value">—</div>
+          </div>
+        </div>
+        <form id="bonusExpirySettingsForm" class="d-flex flex-column gap-3">
+          <div>
+            <label for="bonusExpiryMonths" class="form-label small fw-semibold">Срок действия бонусов, месяцев</label>
+            <input id="bonusExpiryMonths" type="number" class="form-control rounded-3" min="1" max="60" step="1" required>
+          </div>
+          <div class="settings-note">
+            <div><b>Как это работает:</b> если поставить 6 месяцев, то бонусы, начисленные сегодня, будут сгорать через 6 месяцев от даты начисления.</div>
+            <div id="bonusExpirySourceText" class="mt-2">Источник настройки: —</div>
+            <div id="bonusExpiryUpdatedText" class="mt-1">Последнее обновление: —</div>
+          </div>
+          <div id="bonusExpirySettingsStatus" class="settings-status"></div>
+          <button id="bonusExpirySettingsSubmit" type="submit" class="btn btn-primary rounded-3 align-self-start">
+            <i class="bi bi-save me-2"></i>Сохранить срок
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-7 col-lg-6">
+    <div class="card shadow-sm settings-card h-100">
+      <div class="card-body">
+        <div class="mb-3">
+          <h6 class="mb-1 fw-bold">Отмена ошибочного чека</h6>
+          <div class="text-muted small">Администратор может отменить ошибочный чек. После отмены он перестанет учитываться в бонусах, литрах топлива и отчетах.</div>
+        </div>
+        <form id="adminReceiptCancelForm" class="d-flex flex-column gap-3">
+          <div>
+            <label for="adminReceiptCheckId" class="form-label small fw-semibold">Номер чека</label>
+            <input id="adminReceiptCheckId" type="text" class="form-control rounded-3" maxlength="100" placeholder="Например, API-CANCEL-001" required>
+          </div>
+          <div>
+            <label for="adminReceiptCancelReason" class="form-label small fw-semibold">Причина отмены</label>
+            <textarea id="adminReceiptCancelReason" class="form-control rounded-3" rows="3" maxlength="500" placeholder="Необязательно"></textarea>
+          </div>
+          <div class="settings-note">
+            Отмена влияет на сводные отчеты, движение бонусов и топливные показатели по этому чеку.
+          </div>
+          <div id="adminReceiptCancelStatus" class="receipt-cancel-status"></div>
+          <button id="adminReceiptCancelSubmit" type="submit" class="btn btn-outline-danger rounded-3 align-self-start">
+            <i class="bi bi-x-octagon me-2"></i>Отменить чек
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Графики -->
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h6 class="mb-0 fw-bold" data-i18n="dashboard_revenue_week">Выручка за 7 дней</h6>
+          <span class="badge bg-light text-muted border" id="dashboardCurrencyBadge">₽</span>
+        </div>
+        <canvas id="salesChart" height="90"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h6 class="mb-3 fw-bold" data-i18n="dashboard_quick_links">Быстрые ссылки</h6>
+        <div class="d-flex flex-column gap-2">
+          <a href="/cashier" class="btn btn-outline-primary text-start rounded-3">
+            <i class="bi bi-cash-register me-2"></i><span data-i18n="dashboard_open_cashier">Открыть кассу</span>
+          </a>
+          <a href="/admin/cashiers" class="btn btn-outline-secondary text-start rounded-3">
+            <i class="bi bi-person-badge me-2"></i>Кассиры
+          </a>
+          <a href="/admin/rules" class="btn btn-outline-secondary text-start rounded-3">
+            <i class="bi bi-sliders me-2"></i><span data-i18n="dashboard_configure_rules">Настроить правила</span>
+          </a>
+          <a href="/reports" class="btn btn-outline-secondary text-start rounded-3">
+            <i class="bi bi-bar-chart-line me-2"></i>Отчёты
+          </a>
+          <a href="/docs" class="btn btn-outline-secondary text-start rounded-3" target="_blank">
+            <i class="bi bi-code-square me-2"></i><span data-i18n="dashboard_api_docs">API документация</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mt-1">
+  <div class="col-lg-5">
+    <div class="card shadow-sm news-admin-card h-100">
+      <div class="card-body">
+        <div class="mb-3">
+          <h6 class="mb-1 fw-bold" data-i18n="dashboard_news_title">Новости для клиентов</h6>
+          <div class="text-muted small" data-i18n="dashboard_news_subtitle">Публикуйте общие уведомления для всех клиентов приложения</div>
+        </div>
+        <form id="adminNewsForm" class="d-flex flex-column gap-3">
+          <input id="adminNewsEditingId" type="hidden">
+          <div>
+            <label for="adminNewsTitle" class="form-label small fw-semibold" data-i18n="dashboard_news_label_title">Заголовок</label>
+            <input id="adminNewsTitle" type="text" class="form-control rounded-3" maxlength="200" required>
+          </div>
+          <div>
+            <label for="adminNewsBody" class="form-label small fw-semibold" data-i18n="dashboard_news_label_body">Текст новости</label>
+            <textarea id="adminNewsBody" class="form-control rounded-3" rows="6" maxlength="2000" required></textarea>
+          </div>
+          <div class="news-emoji-panel">
+            <div class="news-emoji-title" data-i18n="dashboard_news_emoji_title">Смайлики для публикации</div>
+            <div class="news-emoji-list">
+              <button type="button" class="news-emoji-btn" data-news-emoji="🎉" aria-label="party popper">🎉</button>
+              <button type="button" class="news-emoji-btn" data-news-emoji="🔥" aria-label="fire">🔥</button>
+              <button type="button" class="news-emoji-btn" data-news-emoji="⛽" aria-label="fuel">⛽</button>
+              <button type="button" class="news-emoji-btn" data-news-emoji="🎁" aria-label="gift">🎁</button>
+              <button type="button" class="news-emoji-btn" data-news-emoji="⭐" aria-label="star">⭐</button>
+              <button type="button" class="news-emoji-btn" data-news-emoji="📣" aria-label="megaphone">📣</button>
+              <button type="button" class="news-emoji-btn" data-news-emoji="✅" aria-label="check mark">✅</button>
+              <button type="button" class="news-emoji-btn" data-news-emoji="⚠️" aria-label="warning">⚠️</button>
+              <button type="button" class="news-emoji-btn" data-news-emoji="🚗" aria-label="car">🚗</button>
+              <button type="button" class="news-emoji-btn" data-news-emoji="💳" aria-label="card">💳</button>
+              <button type="button" class="news-emoji-btn" data-news-emoji="💰" aria-label="money bag">💰</button>
+              <button type="button" class="news-emoji-btn" data-news-emoji="🏆" aria-label="trophy">🏆</button>
+              <button type="button" class="news-emoji-btn" data-news-emoji="🔔" aria-label="bell">🔔</button>
+              <button type="button" class="news-emoji-btn" data-news-emoji="🎯" aria-label="target">🎯</button>
+              <button type="button" class="news-emoji-btn" data-news-emoji="🚀" aria-label="rocket">🚀</button>
+              <button type="button" class="news-emoji-btn" data-news-emoji="💎" aria-label="gem">💎</button>
+            </div>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <button id="adminNewsSubmit" type="submit" class="btn btn-primary rounded-3">
+              <i class="bi bi-send me-2"></i><span id="adminNewsSubmitLabel" data-i18n="dashboard_news_button">Отправить всем</span>
+            </button>
+            <button id="adminNewsCancelEdit" type="button" class="btn btn-outline-secondary rounded-3 d-none" data-i18n="dashboard_news_cancel_edit">Отмена</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card shadow-sm news-admin-card h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-3 gap-3">
+          <div>
+            <h6 class="mb-1 fw-bold" data-i18n="dashboard_news_list_title">Отправленные новости</h6>
+            <div class="text-muted small"><span data-i18n="dashboard_news_created">Опубликовано</span>: <span id="adminNewsCount">0</span></div>
+          </div>
+          <button id="adminNewsReload" type="button" class="btn btn-outline-secondary btn-sm rounded-3">
+            <i class="bi bi-arrow-clockwise"></i>
+          </button>
+        </div>
+        <div id="adminNewsList" class="news-admin-list">
+          <div class="news-admin-empty" data-i18n="dashboard_news_empty">Новостей пока нет</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+const salesData = {{ sales_data | default([], true) | tojson }};
+let suspiciousAlerts = {{ suspicious_alerts | default([], true) | tojson }};
+const labels = salesData.map(d => d.day).reverse();
+const values = salesData.map(d => d.total).reverse();
+
+document.getElementById('dashboardCurrencyBadge').textContent = appI18n.getCurrencySymbol();
+
+const dashboardChart = new Chart(document.getElementById('salesChart'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [{
+      label: `${appI18n.t('dashboard_revenue_week')} (${appI18n.getCurrencySymbol()})`,
+      data: values,
+      backgroundColor: 'rgba(13,110,253,.75)',
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { grid: { color: '#f0f0f0' }, ticks: { color: '#6c757d' } },
+      x: { grid: { display: false }, ticks: { color: '#6c757d' } }
+    }
+  }
+});
+
+window.addEventListener('app:locale-changed', () => {
+  document.getElementById('dashboardCurrencyBadge').textContent = appI18n.getCurrencySymbol();
+  dashboardChart.data.datasets[0].label = `${appI18n.t('dashboard_revenue_week')} (${appI18n.getCurrencySymbol()})`;
+  dashboardChart.update();
+  if (adminNewsEditingId?.value && adminNewsSubmitLabel) {
+    adminNewsSubmitLabel.textContent = appI18n.t('dashboard_news_update_button');
+  } else if (adminNewsSubmitLabel) {
+    adminNewsSubmitLabel.textContent = appI18n.t('dashboard_news_button');
+  }
+  renderAdminNews();
+  renderSuspiciousAlerts();
+});
+
+const adminNewsForm = document.getElementById('adminNewsForm');
+const adminNewsList = document.getElementById('adminNewsList');
+const adminNewsCount = document.getElementById('adminNewsCount');
+const adminNewsTitle = document.getElementById('adminNewsTitle');
+const adminNewsBody = document.getElementById('adminNewsBody');
+const adminNewsEditingId = document.getElementById('adminNewsEditingId');
+const adminNewsSubmit = document.getElementById('adminNewsSubmit');
+const adminNewsSubmitLabel = document.getElementById('adminNewsSubmitLabel');
+const adminNewsCancelEdit = document.getElementById('adminNewsCancelEdit');
+const adminNewsReload = document.getElementById('adminNewsReload');
+const suspiciousAlertsList = document.getElementById('suspiciousAlertsList');
+const suspiciousAlertsCount = document.getElementById('suspiciousAlertsCount');
+const suspiciousAlertsReload = document.getElementById('suspiciousAlertsReload');
+const bonusExpirySettingsForm = document.getElementById('bonusExpirySettingsForm');
+const bonusExpiryMonths = document.getElementById('bonusExpiryMonths');
+const bonusExpirySettingsSubmit = document.getElementById('bonusExpirySettingsSubmit');
+const bonusExpiryCurrentValue = document.getElementById('bonusExpiryCurrentValue');
+const bonusExpiryPreviewValue = document.getElementById('bonusExpiryPreviewValue');
+const bonusExpirySourceText = document.getElementById('bonusExpirySourceText');
+const bonusExpiryUpdatedText = document.getElementById('bonusExpiryUpdatedText');
+const bonusExpirySettingsStatus = document.getElementById('bonusExpirySettingsStatus');
+const adminReceiptCancelForm = document.getElementById('adminReceiptCancelForm');
+const adminReceiptCheckId = document.getElementById('adminReceiptCheckId');
+const adminReceiptCancelReason = document.getElementById('adminReceiptCancelReason');
+const adminReceiptCancelStatus = document.getElementById('adminReceiptCancelStatus');
+const adminReceiptCancelSubmit = document.getElementById('adminReceiptCancelSubmit');
+let dashboardNews = [];
+let adminNewsLastFocusedField = adminNewsTitle;
+
+[adminNewsTitle, adminNewsBody].forEach((field) => {
+  field?.addEventListener('focus', () => {
+    adminNewsLastFocusedField = field;
+  });
+});
+
+function insertEmojiIntoAdminNewsField(emoji) {
+  const field = adminNewsLastFocusedField || adminNewsBody || adminNewsTitle;
+  if (!field) return;
+
+  const start = field.selectionStart ?? field.value.length;
+  const end = field.selectionEnd ?? field.value.length;
+  const beforeNeedsSpace = start > 0 && !/\s/.test(field.value.charAt(start - 1));
+  const afterNeedsSpace = end < field.value.length && !/\s/.test(field.value.charAt(end));
+  const insertion = `${beforeNeedsSpace ? ' ' : ''}${emoji}${afterNeedsSpace ? ' ' : ''}`;
+
+  field.focus();
+  field.setRangeText(insertion, start, end, 'end');
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function resetAdminNewsForm() {
+  adminNewsForm?.reset();
+  if (adminNewsEditingId) {
+    adminNewsEditingId.value = '';
+  }
+  if (adminNewsSubmitLabel) {
+    adminNewsSubmitLabel.textContent = appI18n.t('dashboard_news_button');
+  }
+  adminNewsCancelEdit?.classList.add('d-none');
+}
+
+function startAdminNewsEdit(newsId) {
+  const item = dashboardNews.find((entry) => Number(entry.id) === Number(newsId));
+  if (!item) return;
+
+  adminNewsEditingId.value = String(item.id);
+  adminNewsTitle.value = item.title || '';
+  adminNewsBody.value = item.body || '';
+  if (adminNewsSubmitLabel) {
+    adminNewsSubmitLabel.textContent = appI18n.t('dashboard_news_update_button');
+  }
+  adminNewsCancelEdit?.classList.remove('d-none');
+  adminNewsTitle.focus();
+}
+
+function renderBonusExpirySettings(payload, statusText = '') {
+  if (!bonusExpiryMonths) return;
+  const months = Number(payload?.months || 12);
+  const preview = payload?.preview_expiry_date_label || '—';
+  const source = payload?.source === 'admin' ? 'админка' : 'значение по умолчанию из конфигурации';
+  const updated = payload?.updated_at_label || 'ещё не менялось вручную';
+
+  bonusExpiryMonths.value = months;
+  if (bonusExpiryCurrentValue) {
+    bonusExpiryCurrentValue.textContent = `${months} мес.`;
+  }
+  if (bonusExpiryPreviewValue) {
+    bonusExpiryPreviewValue.textContent = preview;
+  }
+  if (bonusExpirySourceText) {
+    bonusExpirySourceText.textContent = `Источник настройки: ${source}`;
+  }
+  if (bonusExpiryUpdatedText) {
+    bonusExpiryUpdatedText.textContent = `Последнее обновление: ${updated}`;
+  }
+  if (bonusExpirySettingsStatus) {
+    bonusExpirySettingsStatus.textContent = statusText;
+  }
+}
+
+function renderAdminReceiptCancelStatus(message = '', isError = false) {
+  if (!adminReceiptCancelStatus) return;
+  adminReceiptCancelStatus.textContent = message;
+  adminReceiptCancelStatus.style.color = isError ? '#dc3545' : '#198754';
+}
+
+function formatSuspiciousDate(value) {
+  if (!value) return '—';
+  return appI18n.formatDateTime(value, {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function renderSuspiciousAlerts() {
+  suspiciousAlertsCount.textContent = String(suspiciousAlerts.length);
+  if (!suspiciousAlerts.length) {
+    suspiciousAlertsList.innerHTML = '<div class="suspicious-empty">Подозрительных операций за сегодня не найдено</div>';
+    return;
+  }
+
+  suspiciousAlertsList.innerHTML = suspiciousAlerts.map((item) => {
+    const examples = Array.isArray(item.examples) ? item.examples : [];
+    const examplesHtml = examples.length
+      ? `<div class="suspicious-examples">${examples.map((example) => {
+          const parts = [];
+          if (example.actor_name) parts.push(`<b>${example.actor_name}</b>`);
+          if (example.check_id) parts.push(`чек ${example.check_id}`);
+          if (example.original_check_id) parts.push(`исходный чек ${example.original_check_id}`);
+          if (example.canceled_check_id) parts.push(`чек отмены ${example.canceled_check_id}`);
+          if (example.purchase_amount) parts.push(`сумма ${example.purchase_amount}`);
+          if (example.amount_bonus) parts.push(`списано ${example.amount_bonus} бонусов`);
+          if (example.redeem_percent) parts.push(`доля списания ${example.redeem_percent}%`);
+          if (example.created_at) parts.push(formatSuspiciousDate(example.created_at));
+          return `<div class="suspicious-example">${parts.join(' • ') || 'Без деталей'}</div>`;
+        }).join('')}</div>`
+      : '';
+    const thresholdText = item.code === 'high_redeem_share'
+      ? `Порог: ${item.threshold}%`
+      : `Порог: ${item.threshold}`;
+    return `
+      <div class="suspicious-item ${item.severity || ''}">
+        <div class="suspicious-head">
+          <div>
+            <div class="suspicious-title">${item.title}</div>
+            <div class="suspicious-meta">${item.description}</div>
+          </div>
+          <div class="text-end">
+            <div class="fw-bold">${item.metric || 0}</div>
+            <div class="suspicious-meta">${thresholdText}</div>
+          </div>
+        </div>
+        ${examplesHtml}
+      </div>`;
+  }).join('');
+}
+
+async function loadSuspiciousAlerts() {
+  try {
+    const response = await fetch('/api/admin/suspicious-activity', {
+      credentials: 'include',
+      offlineAuth: 'admin',
+      offlineCacheKey: 'admin_suspicious_activity',
+      offlineCacheScope: 'admin',
+    });
+    if (!response.ok) {
+      showToast('Не удалось загрузить подозрительные операции', 'danger');
+      return;
+    }
+    const payload = await response.json();
+    suspiciousAlerts = Array.isArray(payload.items) ? payload.items : [];
+    if (window.AZSOffline?.isCachedResponse(response)) {
+      showToast('Связь слабая. Показаны последние сохраненные уведомления', 'warning');
+    }
+    renderSuspiciousAlerts();
+  } catch {
+    suspiciousAlerts = [];
+    renderSuspiciousAlerts();
+  }
+}
+
+async function loadBonusExpirySettings() {
+  if (!bonusExpiryMonths) return;
+  try {
+    const response = await fetch('/api/admin/settings/bonus-expiry', {
+      credentials: 'include',
+      offlineAuth: 'admin',
+      offlineCacheKey: 'admin_bonus_expiry_settings',
+      offlineCacheScope: 'admin',
+    });
+    if (!response.ok) {
+      showToast('Не удалось загрузить срок сгорания бонусов', 'danger');
+      return;
+    }
+    const payload = await response.json();
+    if (window.AZSOffline?.isCachedResponse(response)) {
+      showToast('Связь слабая. Показаны последние сохраненные настройки', 'warning');
+    }
+    renderBonusExpirySettings(payload);
+  } catch {
+    renderBonusExpirySettings({ months: Number(bonusExpiryMonths.value || 12) });
+  }
+}
+
+function formatDashboardNewsDate(value) {
+  if (!value) return '—';
+  return appI18n.formatDateTime(value, {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function renderAdminNews() {
+  adminNewsCount.textContent = String(dashboardNews.length);
+  if (!dashboardNews.length) {
+    adminNewsList.innerHTML = `<div class="news-admin-empty">${appI18n.t('dashboard_news_empty')}</div>`;
+    return;
+  }
+
+  adminNewsList.innerHTML = dashboardNews.map((item) => `
+    <div class="news-admin-item">
+      <div class="d-flex align-items-start justify-content-between gap-3">
+        <div>
+          <div class="news-admin-title">${item.title}</div>
+          <div class="news-admin-meta d-flex flex-wrap align-items-center gap-2">
+            <span>${appI18n.t('dashboard_news_created')}: ${formatDashboardNewsDate(item.published_at)}</span>
+            <span class="badge ${item.is_active ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'}">${item.is_active ? appI18n.t('dashboard_news_status_active') : appI18n.t('dashboard_news_status_inactive')}</span>
+          </div>
+        </div>
+        <div class="d-flex flex-wrap justify-content-end gap-2">
+          <button type="button" class="btn btn-outline-primary btn-sm rounded-3" data-news-edit="${item.id}">
+            <i class="bi bi-pencil-square me-1"></i>${appI18n.t('dashboard_news_edit')}
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm rounded-3" data-news-toggle="${item.id}" data-news-active="${item.is_active ? 'true' : 'false'}">
+            <i class="bi ${item.is_active ? 'bi-eye-slash' : 'bi-eye'} me-1"></i>${item.is_active ? appI18n.t('dashboard_news_hide') : appI18n.t('dashboard_news_show')}
+          </button>
+          <button type="button" class="btn btn-outline-danger btn-sm rounded-3" data-news-delete="${item.id}">
+            <i class="bi bi-trash me-1"></i>${appI18n.t('dashboard_news_delete')}
+          </button>
+        </div>
+      </div>
+      <div class="news-admin-body">${item.body}</div>
+    </div>
+  `).join('');
+}
+
+async function loadAdminNews() {
+  try {
+    const response = await fetch('/api/admin/news', {
+      credentials: 'include',
+      offlineAuth: 'admin',
+      offlineCacheKey: 'admin_news_list',
+      offlineCacheScope: 'admin',
+    });
+    if (!response.ok) {
+      showToast(appI18n.t('dashboard_news_load_error'), 'danger');
+      return;
+    }
+    dashboardNews = await response.json();
+    if (window.AZSOffline?.isCachedResponse(response)) {
+      showToast('Связь слабая. Показаны последние сохраненные новости', 'warning');
+    }
+    renderAdminNews();
+  } catch {
+    dashboardNews = [];
+    renderAdminNews();
+  }
+}
+
+adminNewsForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const title = adminNewsTitle.value.trim();
+  const body = adminNewsBody.value.trim();
+  const editingId = adminNewsEditingId?.value?.trim();
+  const existingItem = editingId ? dashboardNews.find((item) => Number(item.id) === Number(editingId)) : null;
+  if (!title || !body) {
+    showToast(appI18n.t('dashboard_news_fill'), 'warning');
+    return;
+  }
+
+  adminNewsSubmit.disabled = true;
+  try {
+    const response = await fetch(editingId ? `/api/admin/news/${editingId}` : '/api/admin/news', {
+      method: editingId ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ title, body, is_active: existingItem?.is_active ?? true }),
+      offlineAuth: 'admin',
+      offlineQueue: true,
+      offlineQueueScope: 'admin',
+      offlineInvalidateCacheKeys: ['admin_news_list'],
+      offlineReplayLabel: editingId ? 'admin-news-update' : 'admin-news-create',
+    });
+    if (window.AZSOffline?.isQueuedResponse(response)) {
+      resetAdminNewsForm();
+      showToast(editingId ? 'Изменение новости поставлено в очередь' : 'Новость поставлена в очередь и будет опубликована после восстановления связи', 'warning');
+      return;
+    }
+    if (!response.ok) {
+      showToast(appI18n.t(editingId ? 'dashboard_news_update_error' : 'dashboard_news_create_error'), 'danger');
+      return;
+    }
+    resetAdminNewsForm();
+    showToast(appI18n.t(editingId ? 'dashboard_news_update_success' : 'dashboard_news_create_success'));
+    await loadAdminNews();
+  } catch {
+    showToast(appI18n.t(editingId ? 'dashboard_news_update_error' : 'dashboard_news_create_error'), 'danger');
+  } finally {
+    adminNewsSubmit.disabled = false;
+  }
+});
+
+adminNewsForm?.addEventListener('click', (event) => {
+  const emojiButton = event.target.closest('[data-news-emoji]');
+  if (!emojiButton) return;
+
+  event.preventDefault();
+  insertEmojiIntoAdminNewsField(emojiButton.dataset.newsEmoji || '');
+});
+
+adminNewsCancelEdit?.addEventListener('click', () => {
+  resetAdminNewsForm();
+});
+
+adminNewsList?.addEventListener('click', async (event) => {
+  const editButton = event.target.closest('[data-news-edit]');
+  if (editButton) {
+    startAdminNewsEdit(editButton.dataset.newsEdit);
+    return;
+  }
+
+  const toggleButton = event.target.closest('[data-news-toggle]');
+  if (toggleButton) {
+    toggleButton.disabled = true;
+    try {
+      const nextIsActive = toggleButton.dataset.newsActive !== 'true';
+      const response = await fetch(`/api/admin/news/${toggleButton.dataset.newsToggle}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ is_active: nextIsActive }),
+        offlineAuth: 'admin',
+        offlineQueue: true,
+        offlineQueueScope: 'admin',
+        offlineInvalidateCacheKeys: ['admin_news_list'],
+        offlineReplayLabel: 'admin-news-toggle',
+      });
+      if (window.AZSOffline?.isQueuedResponse(response)) {
+        showToast('Изменение статуса новости поставлено в очередь', 'warning');
+        return;
+      }
+      if (!response.ok) {
+        showToast(appI18n.t('dashboard_news_toggle_error'), 'danger');
+        return;
+      }
+      showToast(appI18n.t('dashboard_news_toggle_success'));
+      await loadAdminNews();
+    } catch {
+      showToast(appI18n.t('dashboard_news_toggle_error'), 'danger');
+    } finally {
+      toggleButton.disabled = false;
+    }
+    return;
+  }
+
+  const button = event.target.closest('[data-news-delete]');
+  if (!button) return;
+
+  button.disabled = true;
+  try {
+    const response = await fetch(`/api/admin/news/${button.dataset.newsDelete}`, {
+      method: 'DELETE',
+      credentials: 'include',
+      offlineAuth: 'admin',
+      offlineQueue: true,
+      offlineQueueScope: 'admin',
+      offlineInvalidateCacheKeys: ['admin_news_list'],
+      offlineReplayLabel: 'admin-news-delete',
+    });
+    if (window.AZSOffline?.isQueuedResponse(response)) {
+      showToast('Удаление новости поставлено в очередь', 'warning');
+      return;
+    }
+    if (!response.ok) {
+      showToast(appI18n.t('dashboard_news_delete_error'), 'danger');
+      return;
+    }
+    showToast(appI18n.t('dashboard_news_delete_success'));
+    await loadAdminNews();
+  } catch {
+    showToast(appI18n.t('dashboard_news_delete_error'), 'danger');
+  } finally {
+    button.disabled = false;
+  }
+});
+
+adminNewsReload?.addEventListener('click', () => {
+  loadAdminNews();
+});
+
+suspiciousAlertsReload?.addEventListener('click', () => {
+  loadSuspiciousAlerts();
+});
+
+bonusExpirySettingsForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const months = Number(bonusExpiryMonths.value);
+  if (!Number.isInteger(months) || months < 1 || months > 60) {
+    showToast('Введите срок от 1 до 60 месяцев', 'warning');
+    return;
+  }
+
+  bonusExpirySettingsSubmit.disabled = true;
+  if (bonusExpirySettingsStatus) {
+    bonusExpirySettingsStatus.textContent = 'Сохраняем новую настройку...';
+  }
+  try {
+    const response = await fetch('/api/admin/settings/bonus-expiry', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ months }),
+      offlineAuth: 'admin',
+      offlineQueue: true,
+      offlineQueueScope: 'admin',
+      offlineInvalidateCacheKeys: ['admin_bonus_expiry_settings'],
+      offlineReplayLabel: 'admin-bonus-expiry-update',
+    });
+    if (window.AZSOffline?.isQueuedResponse(response)) {
+      showToast('Новая настройка срока поставлена в очередь', 'warning');
+      if (bonusExpirySettingsStatus) {
+        bonusExpirySettingsStatus.textContent = 'Изменение поставлено в очередь до восстановления связи.';
+      }
+      return;
+    }
+    if (!response.ok) {
+      showToast('Не удалось сохранить срок сгорания бонусов', 'danger');
+      if (bonusExpirySettingsStatus) {
+        bonusExpirySettingsStatus.textContent = 'Не удалось сохранить срок.';
+      }
+      return;
+    }
+    const payload = await response.json();
+    showToast('Срок сгорания бонусов обновлён');
+    renderBonusExpirySettings(payload, 'Сохранено. Новые начисления будут с этим сроком.');
+  } catch {
+    showToast('Не удалось сохранить срок сгорания бонусов', 'danger');
+    if (bonusExpirySettingsStatus) {
+      bonusExpirySettingsStatus.textContent = 'Не удалось сохранить срок.';
+    }
+  } finally {
+    bonusExpirySettingsSubmit.disabled = false;
+  }
+});
+
+adminReceiptCancelForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const checkId = adminReceiptCheckId?.value?.trim() || '';
+  const reason = adminReceiptCancelReason?.value?.trim() || '';
+  if (!checkId) {
+    showToast('Введите номер чека', 'warning');
+    return;
+  }
+  if (!confirm(`Отменить чек ${checkId}?`)) {
+    return;
+  }
+
+  adminReceiptCancelSubmit.disabled = true;
+  renderAdminReceiptCancelStatus('Отменяем чек...');
+  try {
+    const response = await fetch('/api/admin/cancel-receipt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ check_id: checkId, reason: reason || null }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const detail = payload?.detail || 'Не удалось отменить чек';
+      renderAdminReceiptCancelStatus(detail, true);
+      showToast(detail, 'danger');
+      return;
+    }
+
+    adminReceiptCancelForm.reset();
+    renderAdminReceiptCancelStatus(
+      `Чек ${payload.original_check_id} отменён.\nСторно бонусных операций: ${payload.reversed_transactions}.\nСторно топливных продаж: ${payload.reversed_fuel_sales}.`
+    );
+    showToast('Чек отменён');
+    loadSuspiciousAlerts();
+  } catch {
+    renderAdminReceiptCancelStatus('Не удалось отменить чек', true);
+    showToast('Не удалось отменить чек', 'danger');
+  } finally {
+    adminReceiptCancelSubmit.disabled = false;
+  }
+});
+
+window.addEventListener('azs:offline-queue-flushed', () => {
+  loadAdminNews();
+  loadBonusExpirySettings();
+  loadSuspiciousAlerts();
+});
+
+loadAdminNews();
+loadBonusExpirySettings();
+renderSuspiciousAlerts();
+</script>
+{% endblock %}

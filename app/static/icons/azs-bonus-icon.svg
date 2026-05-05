@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="АЗС Бонус">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d6efd"/>
+      <stop offset="100%" stop-color="#6610f2"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <path d="M186 116h108c29 0 52 23 52 52v63c0 18-9 35-24 45v113c0 18-15 33-33 33h-58c-18 0-33-15-33-33V149c0-18-5-33-12-33Zm36 54v218h76V266h-24v-24h24v-74c0-8-6-14-14-14h-62Zm114 89h36c11 0 20 9 20 20v92h-36v-88h-20Z" fill="#fff"/>
+  <circle cx="256" cy="352" r="28" fill="#8dd0ff"/>
+</svg>

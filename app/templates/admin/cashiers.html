@@ -1,0 +1,493 @@
+{% extends "base.html" %}
+{% block title %}Кассиры — АЗС Бонус{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between">
+  <div>
+    <h1><i class="bi bi-person-badge me-2 text-primary"></i><span id="cashiersPageTitle">Кассиры</span></h1>
+    <div class="text-muted" id="cashiersPageSubtitle">Создание кассиров и управление логином/паролем</div>
+  </div>
+  <a href="/admin" class="btn btn-sm btn-outline-secondary" id="cashiersBackBtn">
+    <i class="bi bi-house-door me-1"></i><span id="cashiersBackBtnText">Главная админка</span>
+  </a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h6 class="mb-3 fw-bold" id="cashiersAddTitle">Добавить кассира</h6>
+        <div class="row g-2">
+          <div class="col-12">
+            <label class="form-label" id="cashiersNewNameLabel">Имя кассира</label>
+            <input id="cNewName" class="form-control" placeholder="Например: Иван">
+          </div>
+          <div class="col-12">
+            <label class="form-label" id="cashiersNewUsernameLabel">Логин</label>
+            <input id="cNewUsername" class="form-control" placeholder="Например: cashier1">
+          </div>
+          <div class="col-12">
+            <label class="form-label" id="cashiersNewPasswordLabel">Пароль</label>
+            <input id="cNewPassword" type="password" class="form-control" placeholder="Минимум 4 символа">
+          </div>
+          <div class="col-12">
+            <label class="form-label" id="cashiersNewAzsLabel">АЗС ID (не обязательно)</label>
+            <input id="cNewAzsId" type="number" class="form-control" placeholder="Например: 1">
+          </div>
+          <div class="col-12 d-grid mt-2">
+            <button id="btnCreateCashier" class="btn btn-primary" onclick="createCashier()">
+              <i class="bi bi-plus-circle me-1"></i><span id="cashiersCreateBtnText">Создать</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+      <div class="card-body">
+        <h6 class="mb-2 fw-bold" id="cashiersGuideTitle">Как выдать логин/пароль кассиру</h6>
+        <div class="text-muted small" id="cashiersGuideText">
+          1) Создайте кассира на этой странице.<br>
+          2) Сообщите кассиру логин и пароль.<br>
+          3) Кассир заходит на страницу <b>Касса</b> и нажимает <b>Войти</b>.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h6 class="mb-0 fw-bold" id="cashiersListTitle">Список кассиров</h6>
+          <button class="btn btn-sm btn-outline-secondary" onclick="loadCashiers()">
+            <i class="bi bi-arrow-clockwise me-1"></i><span id="cashiersReloadBtnText">Обновить</span>
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+            <tr>
+              <th style="width:70px">ID</th>
+              <th id="cashiersHeadName">Имя</th>
+              <th id="cashiersHeadLogin">Логин</th>
+              <th style="width:90px">АЗС</th>
+              <th style="width:90px" id="cashiersHeadActive">Активен</th>
+              <th style="width:210px"></th>
+            </tr>
+            </thead>
+            <tbody id="cashiersTbody"></tbody>
+          </table>
+        </div>
+
+        <div id="cashiersEmpty" class="text-muted small" style="display:none">Кассиров пока нет.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно: смена пароля -->
+<div class="modal fade" id="cashierPwdModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-key me-2"></i><span id="cashiersPwdModalTitle">Сменить пароль</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-muted small mb-2"><span id="cashiersPwdWho">Кассир:</span> <span id="pwdCashierLabel" class="fw-semibold"></span></div>
+        <input type="hidden" id="pwdCashierId">
+        <div class="mb-3">
+          <label class="form-label" id="cashiersPwdNewLabel">Новый пароль</label>
+          <input id="pwdNew" type="password" class="form-control" placeholder="Минимум 4 символа">
+        </div>
+        <div class="d-grid">
+          <button id="btnPwdSave" class="btn btn-primary" onclick="savePassword()">
+            <i class="bi bi-check2 me-1"></i><span id="cashiersPwdSaveBtnText">Сохранить</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+'use strict';
+
+const CASHIERS_TEXTS = {
+  ru: {
+    pageTitle: 'Кассиры', pageSubtitle: 'Создание кассиров и управление логином/паролем', back: 'Главная админка',
+    addTitle: 'Добавить кассира', nameLabel: 'Имя кассира', usernameLabel: 'Логин', passwordLabel: 'Пароль',
+    azsLabel: 'АЗС ID (не обязательно)', create: 'Создать', guideTitle: 'Как выдать логин/пароль кассиру',
+    guideText: '1) Создайте кассира на этой странице.<br>2) Сообщите кассиру логин и пароль.<br>3) Кассир заходит на страницу <b>Касса</b> и нажимает <b>Войти</b>.',
+    listTitle: 'Список кассиров', reload: 'Обновить', headName: 'Имя', headLogin: 'Логин', headActive: 'Активен', empty: 'Кассиров пока нет.',
+    pwdTitle: 'Сменить пароль', cashier: 'Кассир:', newPassword: 'Новый пароль', save: 'Сохранить', loading: 'Загрузка...',
+    loadError: 'Не удалось загрузить кассиров', placeholderLogin: 'логин', passwordBtn: 'Пароль', createNameRequired: 'Введите имя кассира',
+    createLoginRequired: 'Введите логин', passwordMin: 'Пароль минимум 4 символа', createError: 'Не удалось создать кассира', created: 'Кассир создан',
+    saveNameRequired: 'Имя кассира не может быть пустым', saveLoginRequired: 'Логин не может быть пустым', saveError: 'Не удалось сохранить', saved: 'Сохранено',
+    passwordChangedError: 'Не удалось сменить пароль', passwordChanged: 'Пароль обновлён', saving: 'Сохранение...', creating: 'Создание...',
+    deleteConfirm: 'Удалить кассира #{id}? Если у него есть история смен или продаж, он будет архивирован и скрыт из списка.', deleteError: 'Не удалось удалить',
+    archived: 'Кассир архивирован: история сохранена', deleted: 'Кассир удалён'
+  },
+  en: {
+    pageTitle: 'Cashiers', pageSubtitle: 'Create cashiers and manage login/password', back: 'Admin Home',
+    addTitle: 'Add cashier', nameLabel: 'Cashier name', usernameLabel: 'Login', passwordLabel: 'Password',
+    azsLabel: 'Station ID (optional)', create: 'Create', guideTitle: 'How to give login/password to a cashier',
+    guideText: '1) Create a cashier on this page.<br>2) Share the login and password with the cashier.<br>3) The cashier opens the <b>Cash Desk</b> page and presses <b>Login</b>.',
+    listTitle: 'Cashier list', reload: 'Refresh', headName: 'Name', headLogin: 'Login', headActive: 'Active', empty: 'No cashiers yet.',
+    pwdTitle: 'Change password', cashier: 'Cashier:', newPassword: 'New password', save: 'Save', loading: 'Loading...',
+    loadError: 'Failed to load cashiers', placeholderLogin: 'login', passwordBtn: 'Password', createNameRequired: 'Enter cashier name',
+    createLoginRequired: 'Enter login', passwordMin: 'Password must be at least 4 characters', createError: 'Failed to create cashier', created: 'Cashier created',
+    saveNameRequired: 'Cashier name cannot be empty', saveLoginRequired: 'Login cannot be empty', saveError: 'Failed to save', saved: 'Saved',
+    passwordChangedError: 'Failed to change password', passwordChanged: 'Password updated', saving: 'Saving...', creating: 'Creating...',
+    deleteConfirm: 'Delete cashier #{id}? If they have shift or sale history, they will be archived and hidden from the list.', deleteError: 'Failed to delete',
+    archived: 'Cashier archived: history preserved', deleted: 'Cashier deleted'
+  },
+  tg: {
+    pageTitle: 'Хазинадорон', pageSubtitle: 'Иловаи хазинадор ва идоракунии логин/рамз', back: 'Админкаи асосӣ',
+    addTitle: 'Иловаи хазинадор', nameLabel: 'Номи хазинадор', usernameLabel: 'Логин', passwordLabel: 'Рамз',
+    azsLabel: 'ID-и АЗС (ихтиёрӣ)', create: 'Илова кардан', guideTitle: 'Чӣ гуна логин/рамзро ба хазинадор диҳем',
+    guideText: '1) Дар ин саҳифа хазинадорро эҷод кунед.<br>2) Логин ва рамзро ба хазинадор диҳед.<br>3) Хазинадор саҳифаи <b>Хазина</b>-ро мекушояд ва <b>Ворид шудан</b>-ро пахш мекунад.',
+    listTitle: 'Рӯйхати хазинадорон', reload: 'Нав кардан', headName: 'Ном', headLogin: 'Логин', headActive: 'Фаъол', empty: 'Ҳоло хазинадор нест.',
+    pwdTitle: 'Иваз кардани рамз', cashier: 'Хазинадор:', newPassword: 'Рамзи нав', save: 'Сабт кардан', loading: 'Бор шуда истодааст...',
+    loadError: 'Боркунии хазинадорон иҷро нашуд', placeholderLogin: 'логин', passwordBtn: 'Рамз', createNameRequired: 'Номи хазинадорро ворид кунед',
+    createLoginRequired: 'Логинро ворид кунед', passwordMin: 'Рамз бояд ҳадди ақал 4 аломат дошта бошад', createError: 'Иловаи хазинадор иҷро нашуд', created: 'Хазинадор илова шуд',
+    saveNameRequired: 'Номи хазинадор холӣ буда наметавонад', saveLoginRequired: 'Логин холӣ буда наметавонад', saveError: 'Сабт иҷро нашуд', saved: 'Сабт шуд',
+    passwordChangedError: 'Ивази рамз иҷро нашуд', passwordChanged: 'Рамз нав шуд', saving: 'Дар ҳоли сабт...', creating: 'Дар ҳоли илова...',
+    deleteConfirm: 'Хазинадори #{id}-ро нест кунед? Агар таърихи баст ё фурӯш дошта бошад, бойгонӣ шуда аз рӯйхат пинҳон мешавад.', deleteError: 'Несткунӣ иҷро нашуд',
+    archived: 'Хазинадор бойгонӣ шуд: таърих нигоҳ дошта шуд', deleted: 'Хазинадор нест шуд'
+  }
+};
+
+function cashiersText(key, replacements = {}) {
+  const lang = window.appI18n?.getCurrentLanguage?.() || 'ru';
+  let value = (CASHIERS_TEXTS[lang] && CASHIERS_TEXTS[lang][key]) || CASHIERS_TEXTS.ru[key] || key;
+  for (const [name, replacement] of Object.entries(replacements)) {
+    value = value.replaceAll(`{${name}}`, replacement);
+  }
+  return value;
+}
+
+function applyCashiersLocale() {
+  document.getElementById('cashiersPageTitle').textContent = cashiersText('pageTitle');
+  document.getElementById('cashiersPageSubtitle').textContent = cashiersText('pageSubtitle');
+  document.getElementById('cashiersBackBtnText').textContent = cashiersText('back');
+  document.getElementById('cashiersAddTitle').textContent = cashiersText('addTitle');
+  document.getElementById('cashiersNewNameLabel').textContent = cashiersText('nameLabel');
+  document.getElementById('cashiersNewUsernameLabel').textContent = cashiersText('usernameLabel');
+  document.getElementById('cashiersNewPasswordLabel').textContent = cashiersText('passwordLabel');
+  document.getElementById('cashiersNewAzsLabel').textContent = cashiersText('azsLabel');
+  document.getElementById('cashiersCreateBtnText').textContent = cashiersText('create');
+  document.getElementById('cashiersGuideTitle').textContent = cashiersText('guideTitle');
+  document.getElementById('cashiersGuideText').innerHTML = cashiersText('guideText');
+  document.getElementById('cashiersListTitle').textContent = cashiersText('listTitle');
+  document.getElementById('cashiersReloadBtnText').textContent = cashiersText('reload');
+  document.getElementById('cashiersHeadName').textContent = cashiersText('headName');
+  document.getElementById('cashiersHeadLogin').textContent = cashiersText('headLogin');
+  document.getElementById('cashiersHeadActive').textContent = cashiersText('headActive');
+  document.getElementById('cashiersEmpty').textContent = cashiersText('empty');
+  document.getElementById('cashiersPwdModalTitle').textContent = cashiersText('pwdTitle');
+  document.getElementById('cashiersPwdWho').textContent = cashiersText('cashier');
+  document.getElementById('cashiersPwdNewLabel').textContent = cashiersText('newPassword');
+  document.getElementById('cashiersPwdSaveBtnText').textContent = cashiersText('save');
+  document.getElementById('cNewName').placeholder = cashiersText('nameLabel');
+  document.getElementById('cNewUsername').placeholder = 'cashier1';
+  document.getElementById('cNewPassword').placeholder = cashiersText('passwordMin');
+  document.getElementById('cNewAzsId').placeholder = '1';
+  document.getElementById('pwdNew').placeholder = cashiersText('passwordMin');
+}
+
+function _valIntOrNull(v) {
+  const s = (v ?? '').toString().trim();
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+function _valStrOrNull(v) {
+  const s = (v ?? '').toString().trim();
+  return s ? s : null;
+}
+
+async function loadCashiers() {
+  const tbody = document.getElementById('cashiersTbody');
+  const empty = document.getElementById('cashiersEmpty');
+  tbody.innerHTML = `<tr><td colspan="6" class="text-muted small">${cashiersText('loading')}</td></tr>`;
+
+  const r = await fetch('/api/admin/cashiers', {
+    credentials: 'include',
+    offlineAuth: 'admin',
+    offlineCacheKey: 'admin_cashiers_list',
+    offlineCacheScope: 'admin',
+  });
+  if (!r.ok) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+    showToast(cashiersText('loadError'), 'danger');
+    return;
+  }
+
+  const items = await r.json();
+  if (window.AZSOffline?.isCachedResponse(r)) {
+    showToast('Связь слабая. Показан последний сохраненный список кассиров', 'warning');
+  }
+  if (!items.length) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = items.map(c => {
+    const name = (c.name ?? '');
+    const username = (c.username ?? '');
+    const azsId = (c.azs_id ?? '');
+    const checked = c.is_active ? 'checked' : '';
+    return `
+      <tr data-id="${c.id}">
+        <td class="text-muted">${c.id}</td>
+        <td><input class="form-control form-control-sm" value="${escapeHtml(name)}" data-field="name"></td>
+        <td><input class="form-control form-control-sm" value="${escapeHtml(username)}" data-field="username" placeholder="${escapeHtml(cashiersText('placeholderLogin'))}"></td>
+        <td><input class="form-control form-control-sm" value="${escapeHtml(String(azsId))}" data-field="azs_id" placeholder="-" type="number"></td>
+        <td class="text-center"><input class="form-check-input" type="checkbox" data-field="is_active" ${checked}></td>
+        <td class="text-end">
+          <button class="btn btn-sm btn-outline-primary" onclick="openPwd(${c.id}, '${escapeJs(name)}')">
+            <i class="bi bi-key me-1"></i>${cashiersText('passwordBtn')}
+          </button>
+          <button class="btn btn-sm btn-primary" onclick="saveCashier(${c.id})">
+            <i class="bi bi-check2 me-1"></i>${cashiersText('save')}
+          </button>
+          <button class="btn btn-sm btn-outline-danger" onclick="deleteCashier(${c.id})">
+            <i class="bi bi-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function createCashier() {
+  const btn = document.getElementById('btnCreateCashier');
+  const name = _valStrOrNull(document.getElementById('cNewName').value);
+  const username = _valStrOrNull(document.getElementById('cNewUsername').value);
+  const password = (document.getElementById('cNewPassword').value || '').toString();
+  const azsId = _valIntOrNull(document.getElementById('cNewAzsId').value);
+
+  if (!name) {
+    showToast(cashiersText('createNameRequired'), 'warning');
+    return;
+  }
+  if (!username) {
+    showToast(cashiersText('createLoginRequired'), 'warning');
+    return;
+  }
+  if (!password || password.length < 4) {
+    showToast(cashiersText('passwordMin'), 'warning');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${cashiersText('creating')}`;
+  try {
+    const body = { name, username, password };
+    if (azsId !== null) body.azs_id = azsId;
+
+    const r = await fetch('/api/admin/cashiers', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      credentials: 'include',
+      body: JSON.stringify(body),
+      offlineAuth: 'admin',
+      offlineQueue: true,
+      offlineQueueScope: 'admin',
+      offlineInvalidateCacheKeys: ['admin_cashiers_list'],
+      offlineReplayLabel: 'admin-cashiers-create',
+    });
+    if (window.AZSOffline?.isQueuedResponse(r)) {
+      showToast('Создание кассира поставлено в очередь и отправится после восстановления связи', 'warning');
+      return;
+    }
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      showToast(data.detail || cashiersText('createError'), 'danger');
+      return;
+    }
+
+    document.getElementById('cNewName').value = '';
+    document.getElementById('cNewUsername').value = '';
+    document.getElementById('cNewPassword').value = '';
+    document.getElementById('cNewAzsId').value = '';
+
+    showToast(cashiersText('created'), 'success');
+    await loadCashiers();
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<i class="bi bi-plus-circle me-1"></i>${cashiersText('create')}`;
+  }
+}
+
+async function saveCashier(id) {
+  const row = document.querySelector(`tr[data-id="${id}"]`);
+  if (!row) return;
+
+  const name = _valStrOrNull(row.querySelector('[data-field="name"]').value);
+  const username = _valStrOrNull(row.querySelector('[data-field="username"]').value);
+  const azsId = _valIntOrNull(row.querySelector('[data-field="azs_id"]').value);
+  const isActive = !!row.querySelector('[data-field="is_active"]').checked;
+
+  if (!name) {
+    showToast(cashiersText('saveNameRequired'), 'warning');
+    return;
+  }
+  if (username !== null && username.length < 1) {
+    showToast(cashiersText('saveLoginRequired'), 'warning');
+    return;
+  }
+
+  const body = { name, is_active: isActive };
+  if (azsId !== null) body.azs_id = azsId; else body.azs_id = null;
+  if (username !== null) body.username = username; else body.username = null;
+
+  const r = await fetch(`/api/admin/cashiers/${id}`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    credentials: 'include',
+    body: JSON.stringify(body),
+    offlineAuth: 'admin',
+    offlineQueue: true,
+    offlineQueueScope: 'admin',
+    offlineInvalidateCacheKeys: ['admin_cashiers_list'],
+    offlineReplayLabel: 'admin-cashiers-save',
+  });
+  if (window.AZSOffline?.isQueuedResponse(r)) {
+    showToast('Изменение кассира поставлено в очередь', 'warning');
+    return;
+  }
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    showToast(data.detail || cashiersText('saveError'), 'danger');
+    return;
+  }
+  showToast(cashiersText('saved'), 'success');
+  await loadCashiers();
+}
+
+function openPwd(id, cashierName) {
+  document.getElementById('pwdCashierId').value = String(id);
+  document.getElementById('pwdCashierLabel').textContent = cashierName || ('ID ' + id);
+  document.getElementById('pwdNew').value = '';
+  const el = document.getElementById('cashierPwdModal');
+  bootstrap.Modal.getOrCreateInstance(el).show();
+  setTimeout(() => document.getElementById('pwdNew').focus(), 50);
+}
+
+async function savePassword() {
+  const btn = document.getElementById('btnPwdSave');
+  const id = Number(document.getElementById('pwdCashierId').value);
+  const password = (document.getElementById('pwdNew').value || '').toString();
+  if (!password || password.length < 4) {
+    showToast(cashiersText('passwordMin'), 'warning');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${cashiersText('saving')}`;
+  try {
+    const r = await fetch(`/api/admin/cashiers/${id}`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      credentials: 'include',
+      body: JSON.stringify({ password }),
+      offlineAuth: 'admin',
+      offlineQueue: true,
+      offlineQueueScope: 'admin',
+      offlineInvalidateCacheKeys: ['admin_cashiers_list'],
+      offlineReplayLabel: 'admin-cashiers-password',
+    });
+    if (window.AZSOffline?.isQueuedResponse(r)) {
+      showToast('Смена пароля поставлена в очередь', 'warning');
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('cashierPwdModal')).hide();
+      return;
+    }
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      showToast(data.detail || cashiersText('passwordChangedError'), 'danger');
+      return;
+    }
+    showToast(cashiersText('passwordChanged'), 'success');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('cashierPwdModal')).hide();
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<i class="bi bi-check2 me-1"></i>${cashiersText('save')}`;
+  }
+}
+
+async function deleteCashier(id) {
+  if (!confirm(cashiersText('deleteConfirm', { id }))) return;
+  const r = await fetch(`/api/admin/cashiers/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    offlineAuth: 'admin',
+    offlineQueue: true,
+    offlineQueueScope: 'admin',
+    offlineInvalidateCacheKeys: ['admin_cashiers_list'],
+    offlineReplayLabel: 'admin-cashiers-delete',
+  });
+  if (window.AZSOffline?.isQueuedResponse(r)) {
+    showToast('Удаление кассира поставлено в очередь', 'warning');
+    return;
+  }
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    showToast(data.detail || cashiersText('deleteError'), 'danger');
+    return;
+  }
+  if (data.mode === 'archived') {
+    showToast(cashiersText('archived'), 'warning');
+  } else {
+    showToast(cashiersText('deleted'), 'info');
+  }
+  await loadCashiers();
+}
+
+function escapeHtml(str) {
+  return (str ?? '').toString()
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function escapeJs(str) {
+  return (str ?? '').toString().replaceAll('\\', '\\\\').replaceAll("'", "\\'");
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  applyCashiersLocale();
+  loadCashiers();
+
+  const pwd = document.getElementById('pwdNew');
+  if (pwd) {
+    pwd.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        savePassword();
+      }
+    });
+  }
+});
+
+window.addEventListener('azs:offline-queue-flushed', () => {
+  loadCashiers();
+});
+
+window.addEventListener('app:locale-changed', () => {
+  applyCashiersLocale();
+  loadCashiers();
+});
+</script>
+{% endblock %}

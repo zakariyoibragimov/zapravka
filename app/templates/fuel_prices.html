@@ -1,0 +1,454 @@
+{% extends "base.html" %}
+{% block title %}Цены на топливо — АЗС Бонус{% endblock %}
+{% block head %}
+<style>
+  .fuel-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    padding: 1.5rem;
+    transition: box-shadow .2s;
+    position: relative;
+  }
+  .fuel-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+
+  .fuel-icon {
+    width: 52px; height: 52px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; flex-shrink: 0;
+  }
+  .icon-ai92  { background: #e3f0ff; color: #0d6efd; }
+  .icon-ai95  { background: #e8f5e9; color: #198754; }
+  .icon-ai98  { background: #fff3e0; color: #fd7e14; }
+  .icon-diesel{ background: #f3e5f5; color: #6f42c1; }
+  .icon-gas   { background: #e0f7fa; color: #0dcaf0; }
+  .icon-other { background: #f8f9fa; color: #6c757d; }
+
+  .price-display {
+    font-size: 2.2rem; font-weight: 900; line-height: 1;
+    color: #1a1d21;
+  }
+  .price-display .currency { font-size: 1rem; font-weight: 400; color: #6c757d; }
+
+  .price-edit-row { display: none; }
+  .fuel-card.editing .price-show-row { display: none !important; }
+  .fuel-card.editing .price-edit-row { display: flex !important; }
+
+  .badge-inactive { background: #f8d7da; color: #842029; }
+  .badge-active   { background: #d1e7dd; color: #0f5132; }
+
+  .updated-label { font-size: .72rem; color: #adb5bd; }
+
+  /* Добавить новое */
+  .add-card {
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    cursor: pointer; transition: all .2s; min-height: 180px;
+    color: #6c757d;
+  }
+  .add-card:hover { border-color: #0d6efd; color: #0d6efd; background: #f0f7ff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-fuel-pump-fill me-2 text-primary"></i><span id="fuelPricesTitle">Цены на топливо</span></h1>
+    <div class="text-muted small" id="fuelPricesSubtitle">Актуальные цены — используются в калькуляторе кассира</div>
+  </div>
+  <div id="lastUpdate" class="text-muted small"></div>
+</div>
+
+<!-- Сетка карточек -->
+<div class="row g-3" id="fuelGrid">
+  <div class="col-12 text-center py-5 text-muted">
+    <span class="spinner-border spinner-border-sm me-2"></span><span id="fuelGridLoadingText">Загрузка...</span>
+  </div>
+</div>
+
+<!-- Модалка: добавить новый вид -->
+<div class="modal fade" id="addModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:16px">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title"><i class="bi bi-plus-circle me-2 text-primary"></i><span id="fuelAddModalTitle">Добавить вид топлива</span></h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label fw-semibold small" id="fuelAddNameLabel">Название <span class="text-danger">*</span></label>
+          <input type="text" id="addName" class="form-control" placeholder="Бензин АИ-100">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold small" id="fuelAddCodeLabel">Код (латиницей, без пробелов) <span class="text-danger">*</span></label>
+          <input type="text" id="addCode" class="form-control font-monospace" placeholder="ai100">
+          <div class="form-text" id="fuelAddCodeHelp">Используется только внутри системы</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold small" id="fuelAddPriceLabel">Цена за литр (₽) <span class="text-danger">*</span></label>
+          <input type="number" id="addPrice" class="form-control" step="0.01" min="0.01" placeholder="70.00">
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal" id="fuelAddCancelBtn">Отмена</button>
+        <button class="btn btn-primary rounded-3 px-4" id="btnAddConfirm" onclick="confirmAdd()">
+          <i class="bi bi-plus-circle me-1"></i><span id="fuelAddConfirmText">Добавить</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+'use strict';
+
+const FUEL_TEXTS = {
+  ru: {
+    title: 'Цены на топливо', subtitle: 'Актуальные цены — используются в калькуляторе кассира', loading: 'Загрузка...',
+    addFuel: 'Добавить вид топлива', nameLabel: 'Название <span class="text-danger">*</span>',
+    codeLabel: 'Код (латиницей, без пробелов) <span class="text-danger">*</span>', codeHelp: 'Используется только внутри системы',
+    priceLabel: 'Цена за литр ({symbol}) <span class="text-danger">*</span>', cancel: 'Отмена', add: 'Добавить',
+    loadError: 'Ошибка загрузки данных', active: 'Активен', inactive: 'Отключён', toggleOff: 'Отключить', toggleOn: 'Включить',
+    updated: 'Обновлено:', editPrice: 'Изменить цену', save: 'Сохранить', addFuelCard: 'Добавить вид топлива',
+    lastUpdate: 'Последнее обновление:', invalidPrice: 'Введите корректную цену', priceUpdated: 'Цена обновлена:',
+    toggledOn: 'включён', toggledOff: 'отключён', deleted: 'удалён', fillFields: 'Заполните все поля', added: 'Добавлено:',
+    error: 'Ошибка', connectionError: 'Ошибка соединения', deleteConfirm: 'Удалить «{name}»?'
+  },
+  en: {
+    title: 'Fuel Prices', subtitle: 'Current prices used in the cashier calculator', loading: 'Loading...',
+    addFuel: 'Add fuel type', nameLabel: 'Name <span class="text-danger">*</span>',
+    codeLabel: 'Code (latin letters, no spaces) <span class="text-danger">*</span>', codeHelp: 'Used only inside the system',
+    priceLabel: 'Price per liter ({symbol}) <span class="text-danger">*</span>', cancel: 'Cancel', add: 'Add',
+    loadError: 'Failed to load data', active: 'Active', inactive: 'Disabled', toggleOff: 'Disable', toggleOn: 'Enable',
+    updated: 'Updated:', editPrice: 'Edit price', save: 'Save', addFuelCard: 'Add fuel type',
+    lastUpdate: 'Last update:', invalidPrice: 'Enter a valid price', priceUpdated: 'Price updated:',
+    toggledOn: 'enabled', toggledOff: 'disabled', deleted: 'deleted', fillFields: 'Fill in all fields', added: 'Added:',
+    error: 'Error', connectionError: 'Connection error', deleteConfirm: 'Delete "{name}"?'
+  },
+  tg: {
+    title: 'Нархи сӯзишворӣ', subtitle: 'Нархҳои ҷорӣ, ки дар ҳисобкунаки хазина истифода мешаванд', loading: 'Бор шуда истодааст...',
+    addFuel: 'Иловаи навъи сӯзишворӣ', nameLabel: 'Ном <span class="text-danger">*</span>',
+    codeLabel: 'Код (бо ҳарфҳои лотинӣ, бе фосила) <span class="text-danger">*</span>', codeHelp: 'Танҳо дар дохили система истифода мешавад',
+    priceLabel: 'Нарх барои 1 литр ({symbol}) <span class="text-danger">*</span>', cancel: 'Бекор кардан', add: 'Илова кардан',
+    loadError: 'Боркунии маълумот иҷро нашуд', active: 'Фаъол', inactive: 'Хомӯш', toggleOff: 'Хомӯш кардан', toggleOn: 'Фаъол кардан',
+    updated: 'Нав шуд:', editPrice: 'Тағйири нарх', save: 'Сабт кардан', addFuelCard: 'Иловаи навъи сӯзишворӣ',
+    lastUpdate: 'Навсозии охирин:', invalidPrice: 'Нархи дурустро ворид кунед', priceUpdated: 'Нарх нав шуд:',
+    toggledOn: 'фаъол шуд', toggledOff: 'хомӯш шуд', deleted: 'нест шуд', fillFields: 'Ҳамаи майдонҳоро пур кунед', added: 'Илова шуд:',
+    error: 'Хато', connectionError: 'Хатои пайвастшавӣ', deleteConfirm: '«{name}»-ро нест кунед?'
+  }
+};
+
+function fuelText(key, replacements = {}) {
+  const lang = window.appI18n?.getCurrentLanguage?.() || 'ru';
+  let value = (FUEL_TEXTS[lang] && FUEL_TEXTS[lang][key]) || FUEL_TEXTS.ru[key] || key;
+  for (const [name, replacement] of Object.entries(replacements)) {
+    value = value.replaceAll(`{${name}}`, replacement);
+  }
+  return value;
+}
+
+function fuelMoney(value, digits = 2) {
+  return window.appI18n?.formatMoney ? window.appI18n.formatMoney(value, digits) : `${Number(value).toFixed(digits)} ₽`;
+}
+
+function fuelPricePerLiter(value, digits = 2) {
+  return window.appI18n?.formatPricePerLiter ? window.appI18n.formatPricePerLiter(value, digits) : `${Number(value).toFixed(digits)} ₽/л`;
+}
+
+function fuelUnitLabel() {
+  return `${window.appI18n?.getCurrencySymbol?.() || '₽'}/л`;
+}
+
+function applyFuelLocale() {
+  const symbol = window.appI18n?.getCurrencySymbol?.() || '₽';
+  document.getElementById('fuelPricesTitle').textContent = fuelText('title');
+  document.getElementById('fuelPricesSubtitle').textContent = fuelText('subtitle');
+  document.getElementById('fuelGridLoadingText').textContent = fuelText('loading');
+  document.getElementById('fuelAddModalTitle').textContent = fuelText('addFuel');
+  document.getElementById('fuelAddNameLabel').innerHTML = fuelText('nameLabel');
+  document.getElementById('fuelAddCodeLabel').innerHTML = fuelText('codeLabel');
+  document.getElementById('fuelAddCodeHelp').textContent = fuelText('codeHelp');
+  document.getElementById('fuelAddPriceLabel').innerHTML = fuelText('priceLabel', { symbol });
+  document.getElementById('fuelAddCancelBtn').textContent = fuelText('cancel');
+  document.getElementById('fuelAddConfirmText').textContent = fuelText('add');
+}
+
+const ICONS = {
+  ai92: 'icon-ai92', ai95: 'icon-ai95', ai98: 'icon-ai98',
+  diesel: 'icon-diesel', gas: 'icon-gas',
+};
+const EMOJIS = {
+  ai92: '⛽', ai95: '⛽', ai98: '🔥', diesel: '🚛', gas: '💨',
+};
+
+let fuels = [];
+
+async function readErrorDetail(r) {
+  try {
+    const txt = await r.text();
+    if (!txt) return `HTTP ${r.status}`;
+    try {
+      const j = JSON.parse(txt);
+      return j?.detail || txt;
+    } catch {
+      return txt;
+    }
+  } catch {
+    return `HTTP ${r.status}`;
+  }
+}
+
+async function loadFuels() {
+  try {
+    const r = await fetch('/api/fuel-prices');
+    fuels = await r.json();
+    renderGrid();
+  } catch {
+    document.getElementById('fuelGrid').innerHTML =
+      `<div class="col-12 text-danger text-center py-4">${fuelText('loadError')}</div>`;
+  }
+}
+
+function renderGrid() {
+  const grid = document.getElementById('fuelGrid');
+  let html = '';
+
+  fuels.forEach(f => {
+    const iconClass = ICONS[f.code] || 'icon-other';
+    const emoji = EMOJIS[f.code] || '⛽';
+    const statusBadge = f.is_active
+      ? `<span class="badge badge-active rounded-pill px-3">${fuelText('active')}</span>`
+      : `<span class="badge badge-inactive rounded-pill px-3">${fuelText('inactive')}</span>`;
+    const toggleLabel = f.is_active ? fuelText('toggleOff') : fuelText('toggleOn');
+    const toggleIcon = f.is_active ? 'bi-toggle-on text-success' : 'bi-toggle-off text-muted';
+
+    html += `
+    <div class="col-xl-3 col-lg-4 col-md-6">
+      <div class="fuel-card" id="card-${f.id}">
+        <!-- Верх: иконка + статус -->
+        <div class="d-flex align-items-start justify-content-between mb-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="fuel-icon ${iconClass}">${emoji}</div>
+            <div>
+              <div class="fw-bold fs-6 lh-1 mb-1">${f.name}</div>
+              <div class="font-monospace text-muted" style="font-size:.72rem">${f.code}</div>
+            </div>
+          </div>
+          ${statusBadge}
+        </div>
+
+        <!-- Цена (режим показа) -->
+        <div class="price-show-row mb-3">
+          <div class="price-display">${fuelMoney(f.price_per_liter)}</div>
+          <div class="updated-label mt-1">${fuelText('updated')} ${f.updated_at || '—'}</div>
+        </div>
+
+        <!-- Цена (режим редактирования) -->
+        <div class="price-edit-row align-items-center gap-2 mb-3">
+          <input type="number" class="form-control fw-bold"
+                 id="inp-${f.id}" value="${parseFloat(f.price_per_liter).toFixed(2)}"
+                 step="0.01" min="0.01" style="font-size:1.3rem;text-align:right">
+             <span class="text-muted fw-semibold">${fuelUnitLabel()}</span>
+        </div>
+
+        <!-- Кнопки -->
+        <div class="d-flex gap-2">
+          <!-- Кнопки когда НЕ редактируем -->
+          <div class="edit-btns d-flex gap-2 w-100">
+            <button class="btn btn-outline-primary btn-sm flex-grow-1 rounded-3"
+                    onclick="startEdit(${f.id})">
+              <i class="bi bi-pencil me-1"></i>${fuelText('editPrice')}
+            </button>
+            <button class="btn btn-outline-secondary btn-sm rounded-3"
+                    onclick="toggleActive(${f.id})" title="${toggleLabel}">
+              <i class="bi ${toggleIcon} fs-5"></i>
+            </button>
+            <button class="btn btn-outline-danger btn-sm rounded-3"
+                    onclick="deleteFuel(${f.id}, '${f.name.replace(/'/g,"\\'")}')">
+              <i class="bi bi-trash3"></i>
+            </button>
+          </div>
+
+          <!-- Кнопки когда редактируем -->
+          <div class="save-btns d-none d-flex gap-2 w-100">
+            <button class="btn btn-success btn-sm flex-grow-1 rounded-3"
+                    onclick="savePrice(${f.id})">
+              <i class="bi bi-check-lg me-1"></i>${fuelText('save')}
+            </button>
+            <button class="btn btn-outline-secondary btn-sm rounded-3"
+                    onclick="cancelEdit(${f.id})">
+              ${fuelText('cancel')}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  // Карточка "Добавить"
+  html += `
+  <div class="col-xl-3 col-lg-4 col-md-6">
+    <div class="add-card" data-bs-toggle="modal" data-bs-target="#addModal">
+      <i class="bi bi-plus-circle" style="font-size:2.5rem;margin-bottom:.5rem"></i>
+      <div class="fw-semibold">${fuelText('addFuelCard')}</div>
+    </div>
+  </div>`;
+
+  grid.innerHTML = html;
+
+  // Обновить подпись последнего обновления
+  const latest = fuels.reduce((a, b) => (a.updated_at > b.updated_at ? a : b), fuels[0]);
+  if (latest) {
+    document.getElementById('lastUpdate').textContent = `${fuelText('lastUpdate')} ${latest.updated_at}`;
+  }
+}
+
+function startEdit(id) {
+  const card = document.getElementById('card-' + id);
+  card.classList.add('editing');
+  card.querySelector('.edit-btns').classList.add('d-none');
+  card.querySelector('.save-btns').classList.remove('d-none');
+  card.querySelector('#inp-' + id).focus();
+  card.querySelector('#inp-' + id).select();
+}
+
+function cancelEdit(id) {
+  const card = document.getElementById('card-' + id);
+  card.classList.remove('editing');
+  card.querySelector('.edit-btns').classList.remove('d-none');
+  card.querySelector('.save-btns').classList.add('d-none');
+  // Вернуть старое значение
+  const fp = fuels.find(f => f.id === id);
+  if (fp) card.querySelector('#inp-' + id).value = parseFloat(fp.price_per_liter).toFixed(2);
+}
+
+async function savePrice(id) {
+  const inp = document.getElementById('inp-' + id);
+  const price = parseFloat(inp.value);
+  if (!price || price <= 0) {
+    showToast(fuelText('invalidPrice'), 'warning');
+    return;
+  }
+
+  try {
+    const r = await fetch(`/api/fuel-prices/${id}`, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({price_per_liter: price.toFixed(2)}),
+    });
+    if (r.ok) {
+      const data = await r.json();
+      showToast(`✓ ${fuelText('priceUpdated')} ${data.name} — ${fuelPricePerLiter(data.price_per_liter)}`, 'success');
+      await loadFuels();
+    } else {
+      const detail = await readErrorDetail(r);
+      showToast(detail || fuelText('error'), 'danger');
+    }
+  } catch (e) {
+    showToast(fuelText('connectionError') + (e?.message ? ': ' + e.message : ''), 'danger');
+  }
+}
+
+async function toggleActive(id) {
+  const fp = fuels.find(f => f.id === id);
+  if (!fp) return;
+  try {
+    const r = await fetch(`/api/fuel-prices/${id}`, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({price_per_liter: parseFloat(fp.price_per_liter).toFixed(2), is_active: !fp.is_active}),
+    });
+    if (r.ok) {
+      const data = await r.json();
+      showToast(`${data.name}: ${data.is_active ? fuelText('toggledOn') : fuelText('toggledOff')}`, 'info');
+      await loadFuels();
+    } else {
+      const detail = await readErrorDetail(r);
+      showToast(detail || fuelText('error'), 'danger');
+    }
+  } catch (e) {
+    showToast(fuelText('connectionError') + (e?.message ? ': ' + e.message : ''), 'danger');
+  }
+}
+
+async function deleteFuel(id, name) {
+  if (!confirm(fuelText('deleteConfirm', { name }))) return;
+  try {
+    const r = await fetch(`/api/fuel-prices/${id}`, {method: 'DELETE'});
+    if (r.ok) {
+      showToast(`«${name}» ${fuelText('deleted')}`, 'warning');
+      await loadFuels();
+    } else {
+      const detail = await readErrorDetail(r);
+      showToast(detail || fuelText('error'), 'danger');
+    }
+  } catch (e) {
+    showToast(fuelText('connectionError') + (e?.message ? ': ' + e.message : ''), 'danger');
+  }
+}
+
+async function confirmAdd() {
+  const name = document.getElementById('addName').value.trim();
+  const code = document.getElementById('addCode').value.trim().toLowerCase().replace(/\s+/g, '');
+  const price = parseFloat(document.getElementById('addPrice').value);
+
+  if (!name || !code || !price || price <= 0) {
+    showToast(fuelText('fillFields'), 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('btnAddConfirm');
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/fuel-prices', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({code, name, price_per_liter: price.toFixed(2)}),
+    });
+    if (r.ok) {
+      showToast(`✓ ${fuelText('added')} ${name}`, 'success');
+      bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();
+      document.getElementById('addName').value = '';
+      document.getElementById('addCode').value = '';
+      document.getElementById('addPrice').value = '';
+      await loadFuels();
+    } else {
+      const detail = await readErrorDetail(r);
+      showToast(detail || fuelText('error'), 'danger');
+    }
+  } catch (e) {
+    showToast(fuelText('connectionError') + (e?.message ? ': ' + e.message : ''), 'danger');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Нажать Enter в поле цены — сохранить
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.id && e.target.id.startsWith('inp-')) {
+    const id = parseInt(e.target.id.replace('inp-', ''));
+    savePrice(id);
+  }
+  if (e.key === 'Escape' && e.target.id && e.target.id.startsWith('inp-')) {
+    const id = parseInt(e.target.id.replace('inp-', ''));
+    cancelEdit(id);
+  }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  applyFuelLocale();
+  loadFuels();
+});
+
+window.addEventListener('app:locale-changed', () => {
+  applyFuelLocale();
+  renderGrid();
+});
+</script>
+{% endblock %}

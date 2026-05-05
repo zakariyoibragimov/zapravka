@@ -1,0 +1,20 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Core Checks",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".\\scripts\\run_checks.ps1",
+				"-Suite",
+				"core"
+			],
+			"isBackground": false,
+			"group": "test"
+		}
+	]
+}

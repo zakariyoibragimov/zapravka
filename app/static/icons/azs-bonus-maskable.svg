@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="АЗС Бонус maskable">
+  <rect width="512" height="512" fill="#0b57d0"/>
+  <rect x="56" y="56" width="400" height="400" rx="104" fill="#0d6efd"/>
+  <path d="M192 132h108c31 0 56 25 56 56v56c0 21-10 40-28 52v99c0 20-16 36-36 36h-68c-20 0-36-16-36-36V164c0-18-4-32-10-32Zm40 56v187h56v-54h-18v-24h18v-109h-42Zm122 98h28c12 0 22 10 22 22v79h-34v-71h-16Z" fill="#fff"/>
+  <circle cx="256" cy="348" r="34" fill="#b9e1ff"/>
+</svg>

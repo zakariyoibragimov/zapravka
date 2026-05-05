@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}АЗС Бонус{% endblock %}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    :root {
+      --sidebar-bg: #1a1d21;
+      --sidebar-width: 240px;
+      --accent: #0d6efd;
+    }
+    body { background: #f0f2f5; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+    /* Sidebar */
+    .sidebar {
+      width: var(--sidebar-width);
+      min-height: 100vh;
+      background: var(--sidebar-bg);
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    .sidebar-brand {
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 1.25rem 1rem 1rem;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      margin-bottom: .5rem;
+    }
+    .sidebar-brand .brand-icon {
+      width: 36px; height: 36px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .sidebar .nav-link {
+      color: #8b95a1;
+      border-radius: 8px;
+      padding: .55rem .85rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: all .15s;
+      font-size: .92rem;
+      margin: 1px 8px;
+    }
+    .sidebar .nav-link:hover { color: #fff; background: rgba(255,255,255,.07); }
+    .sidebar .nav-link.active { color: #fff; background: var(--accent); }
+    .sidebar .nav-link i { font-size: 1rem; width: 18px; text-align: center; }
+    .sidebar-section {
+      font-size: .68rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: #4a5568;
+      padding: .8rem 1.2rem .3rem;
+      font-weight: 600;
+    }
+
+    /* Main */
+    .main-content { flex: 1; min-width: 0; padding: 1.75rem 2rem; }
+    .page-header { margin-bottom: 1.5rem; }
+    .page-header h1 { font-size: 1.45rem; font-weight: 700; color: #1a1d21; margin: 0; }
+    .page-header .text-muted { font-size: .85rem; }
+
+    /* Cards */
+    .card { border: none; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+    .card-stat { border-left: 4px solid var(--accent) !important; }
+
+    /* Toast */
+    #toast-container { z-index: 1090; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body data-show-admin-menu="{{ '1' if show_admin_menu|default(false) else '0' }}">
+<div class="d-flex">
+  <nav class="sidebar d-flex flex-column">
+    <a href="/" class="sidebar-brand">
+      <span class="brand-icon"><i class="bi bi-fuel-pump-fill text-white"></i></span>
+      <span data-i18n="brand_name">АЗС Бонус</span>
+    </a>
+    <div class="sidebar-section" data-i18n="sidebar_main">Основное</div>
+    <ul class="nav flex-column">
+      <li class="nav-item">
+        <a href="/cashier" class="nav-link" data-path="/cashier">
+          <i class="bi bi-cash-register"></i> <span data-i18n="nav_cashier">Касса</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/fuel-prices" class="nav-link" data-path="/fuel-prices">
+          <i class="bi bi-fuel-pump"></i> <span data-i18n="nav_fuel_prices">Цены на топливо</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/cashier/clients" class="nav-link" data-path="/cashier/clients">
+          <i class="bi bi-people"></i> <span data-i18n="nav_clients">Клиенты</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/reports" class="nav-link" data-path="/reports">
+          <i class="bi bi-bar-chart-line"></i> <span data-i18n="nav_reports">Отчёты</span>
+        </a>
+      </li>
+      {% if show_admin_menu|default(false) %}
+      <li class="nav-item">
+        <a href="/admin" class="nav-link" data-path="/admin">
+          <i class="bi bi-speedometer2"></i> <span data-i18n="nav_dashboard">Дашборд</span>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+    {% if show_admin_menu|default(false) %}
+      <div class="sidebar-section" data-i18n="sidebar_settings">Настройки</div>
+      <ul class="nav flex-column">
+        <li class="nav-item">
+          <a href="/admin/rules" class="nav-link" data-path="/admin/rules">
+            <i class="bi bi-sliders"></i> <span data-i18n="nav_rules">Правила</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="/admin/cashiers" class="nav-link" data-path="/admin/cashiers">
+            <i class="bi bi-person-badge"></i> <span data-i18n="nav_cashiers">Кассиры</span>
+          </a>
+        </li>
+      </ul>
+    {% endif %}
+    <div class="mt-auto p-3">
+      {% if not show_admin_menu|default(false) %}
+      <button type="button" class="btn btn-sm btn-outline-light w-100 mb-2" id="admin-login-open">
+        <i class="bi bi-shield-lock"></i> <span data-i18n="admin_login_open">Вход администратора</span>
+      </button>
+      {% else %}
+      <button type="button" class="btn btn-sm btn-outline-light w-100 mb-2" id="admin-logout-btn">
+        <i class="bi bi-box-arrow-right"></i> <span data-i18n="admin_logout">Выход из админки</span>
+      </button>
+      {% endif %}
+      <div class="rounded-3 p-2 mb-2" style="background:rgba(255,255,255,.05)">
+        <label class="form-label small mb-1" for="ui-language" style="color:#adb5bd" data-i18n="label_language">Язык</label>
+        <select class="form-select form-select-sm mb-2" id="ui-language">
+          <option value="ru">Русский</option>
+          <option value="en">English</option>
+          <option value="tg">Тоҷикӣ</option>
+        </select>
+        <label class="form-label small mb-1" for="ui-currency" style="color:#adb5bd" data-i18n="label_currency">Валюта</label>
+        <select class="form-select form-select-sm" id="ui-currency">
+          <option value="RUB">Рубль ₽</option>
+          <option value="USD">Dollar $</option>
+          <option value="TJS">Сомони</option>
+        </select>
+      </div>
+      <div class="d-flex align-items-center gap-2 p-2 rounded-3" style="background:rgba(255,255,255,.05)">
+        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center"
+             style="width:32px;height:32px;font-size:.75rem;color:#fff;flex-shrink:0">
+          КС
+        </div>
+        <div style="line-height:1.2">
+          <div style="color:#fff;font-size:.82rem;font-weight:600" data-i18n="role_admin" data-i18n-alt="role_cashier">
+            {% if show_admin_menu|default(false) %}Администратор{% else %}Кассир{% endif %}
+          </div>
+          <div style="color:#6c757d;font-size:.75rem" data-i18n="role_admin_subtitle" data-i18n-alt="role_cashier_subtitle">
+            {% if show_admin_menu|default(false) %}Админка{% else %}АЗС №1{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+{% if not show_admin_menu|default(false) %}
+<div class="modal fade" id="adminLoginModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" data-i18n="admin_login_modal_title">Вход администратора</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+      </div>
+      <form id="admin-login-form">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" data-i18n="label_login">Логин</label>
+            <input type="text" class="form-control" id="admin-username" autocomplete="username" required>
+          </div>
+          <div class="mb-0">
+            <label class="form-label" data-i18n="label_password">Пароль</label>
+            <input type="password" class="form-control" id="admin-password" autocomplete="current-password" required>
+          </div>
+          <div class="text-muted mt-2" style="font-size:.85rem" data-i18n="admin_login_help">
+            После входа откроется админка.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal" data-i18n="button_cancel">Отмена</button>
+          <button type="submit" class="btn btn-primary" id="admin-login-submit" data-i18n="button_login">Войти</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div id="toast-container" class="position-fixed bottom-0 end-0 p-3"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/offline.js"></script>
+<script>
+  const LS_UI_LANGUAGE = 'azs_ui_language';
+  const LS_UI_CURRENCY = 'azs_ui_currency';
+  const LS_ADMIN_IDENTITY = 'azs_admin_identity';
+  const LS_CASHIER_IDENTITY = 'azs_cashier_identity';
+  let uiPreferenceScopeOverride = null;
+  const APP_I18N = {
+    ru: {
+      brand_name: 'АЗС Бонус',
+      sidebar_main: 'Основное',
+      sidebar_settings: 'Настройки',
+      nav_cashier: 'Касса',
+      nav_fuel_prices: 'Цены на топливо',
+      nav_clients: 'Клиенты',
+      nav_reports: 'Отчёты',
+      nav_dashboard: 'Дашборд',
+      nav_rules: 'Правила',
+      nav_cashiers: 'Кассиры',
+      admin_login_open: 'Вход администратора',
+      admin_logout: 'Выход из админки',
+      role_admin: 'Администратор',
+      role_cashier: 'Кассир',
+      role_admin_subtitle: 'Админка',
+      role_cashier_subtitle: 'АЗС №1',
+      admin_login_modal_title: 'Вход администратора',
+      label_login: 'Логин',
+      label_password: 'Пароль',
+      label_language: 'Язык',
+      label_currency: 'Валюта',
+      admin_login_help: 'После входа откроется админка.',
+      button_cancel: 'Отмена',
+      button_login: 'Войти',
+      button_logout: 'Выйти',
+      button_show: 'Показать',
+      button_excel: 'Excel',
+      admin_login_fill: 'Введите логин и пароль администратора',
+      admin_login_invalid: 'Неверный логин или пароль администратора',
+      admin_login_server_error: 'Не удалось войти в админку (ошибка сервера)',
+      admin_login_network_error: 'Ошибка сети при входе в админку',
+      admin_logout_error: 'Не удалось выйти из админки',
+      admin_logout_network_error: 'Ошибка сети при выходе из админки',
+      admin_button_dashboard: 'Админка',
+      admin_login_checking: 'Проверка...',
+      report_title: 'Отчёты',
+      report_subtitle: 'Аналитика продаж и бонусной программы',
+      period_from: 'Период с',
+      period_to: 'Период по',
+      report_type: 'Тип отчёта',
+      today: 'Сегодня',
+      seven_days: '7 дней',
+      thirty_days: '30 дней',
+      current_month: 'Текущий месяц',
+      report_fuel_sales: 'Продажи топлива',
+      report_bonus_movement: 'Движение бонусов',
+      report_cashier_sales: 'Продажи по кассирам',
+      report_closed_shifts: 'Закрытые смены',
+      report_action_log: 'Журнал действий',
+      report_fuel_by_type: 'Топливо по видам',
+      period_label: 'Период',
+      no_data_period: 'Нет данных за период',
+      records_count: 'Записей',
+      total: 'Итого',
+      sales: 'Продаж',
+      liters: 'Литров',
+      amount: 'Сумма',
+      bonuses: 'Бонусы',
+      checks_amount: 'Сумма чеков',
+      label_date: 'Дата',
+      label_price_per_liter: 'Цена за литр',
+      label_fuel_type: 'Вид топлива',
+      label_phone: 'Телефон',
+      label_client_name: 'Имя клиента',
+      label_type: 'Тип',
+      label_receipt_amount: 'Сумма чека',
+      label_fuel_liters: 'Литры топлива',
+      label_location: 'Место',
+      label_check_id: 'Номер чека',
+      report_access_required: 'Для просмотра отчётов войдите как кассир или администратор',
+      report_access_required_full: 'Нет доступа к отчётам. Сначала войдите как кассир или администратор.',
+      report_load_error: 'Ошибка загрузки отчёта',
+      report_download_error: 'Ошибка скачивания отчёта',
+      report_export_access_error: 'Нет доступа к выгрузке отчёта',
+      cashier_page_title: 'Касса',
+      cashier_page_subtitle: 'Оформление чека',
+      cashier_login_title: 'Вход кассира',
+      cashier_login_help: 'Введите логин и пароль, которые выдал администратор.',
+      cashier_shift_title: 'Смена кассира',
+      check_title: 'Чек',
+      client_title: 'Клиент',
+      button_find: 'Найти',
+      button_open_shift: 'Открыть смену',
+      button_close_shift: 'Закрыть смену',
+      button_continue_without_client: 'Продолжить без клиента',
+      button_quick_registration: 'Быстрая регистрация',
+      button_register_and_continue: 'Зарегистрировать и продолжить',
+      button_other_client: 'Другой клиент',
+      button_process_receipt: 'Списать чек',
+      button_processing: 'Проведение...',
+      cashier_station: 'АЗС',
+      cashier_store: 'Магазин',
+      cashier_enter_receipt_amount: 'Введите сумму для оформления чека',
+      cashier_shift_operations: 'Операции за смену',
+      cashier_no_operations: 'Операций пока нет',
+      cashier_shift_status_open: 'Смена открыта',
+      cashier_shift_status_closed: 'Смена закрыта',
+      cashier_shift_open_first: 'Откройте смену, чтобы проводить чеки и регистрировать продажи.',
+      cashier_shift_open_hint: 'Смена активна. Проведение чеков доступно.',
+      cashier_shift_opened: 'Смена открыта',
+      cashier_shift_closed_done: 'Смена закрыта',
+      cashier_shift_started_at: 'Открыта',
+      cashier_shift_duration: 'Длительность',
+      cashier_shift_transactions: 'операций',
+      cashier_shift_bonus_accrued: 'Начислено',
+      cashier_shift_bonus_redeemed: 'Списано',
+      cashier_shift_fuel_amount: 'Продажи топлива',
+      cashier_shift_fuel_liters: 'Литров',
+      cashier_shift_status_error: 'Не удалось загрузить состояние смены',
+      cashier_shift_open_error: 'Не удалось открыть смену',
+      cashier_shift_close_error: 'Не удалось закрыть смену',
+      cashier_shift_close_confirm: 'Закрыть текущую смену?',
+      cashier_shift_last_closed: 'Последняя смена закрыта',
+      cashier_shift_last_summary: 'Показаны итоги последней закрытой смены.',
+      cashier_shift_required: 'Сначала откройте смену',
+      cashier_cancel_receipt_title: 'Возврат / отмена чека',
+      cashier_cancel_receipt_hint: 'Введите номер чека и при необходимости причину отмены.',
+      label_cancel_reason: 'Причина отмены',
+      button_cancel_receipt: 'Отменить чек',
+      cashier_cancel_receipt_fill: 'Укажите номер чека',
+      cashier_cancel_receipt_confirm: 'Отменить этот чек?',
+      cashier_cancel_receipt_success: 'Чек отменён',
+      cashier_cancel_receipt_error: 'Не удалось отменить чек',
+      cashier_cancelled: 'Отменён',
+      cashier_sum_to_pay: 'К оплате',
+      cashier_receipt_done: 'Чек проведён',
+      cashier_without_client: 'Без клиента',
+      cashier_without_client_short: 'без клиента',
+      cashier_client_search_placeholder: 'Телефон, имя или последние 4 цифры',
+      cashier_client_search_prompt: 'Введите имя, телефон или последние 4 цифры',
+      cashier_client_search_multiple: 'Найдено несколько клиентов. Уточните имя или последние 4 цифры телефона.',
+      cashier_client_not_found: 'Клиент не найден',
+      cashier_connection_error: 'Ошибка соединения',
+      cashier_signin_required: 'Сначала войдите как кассир',
+      cashier_login_failed: 'Не удалось войти',
+      cashier_login_fill: 'Введите логин и пароль кассира',
+      cashier_logged_in: 'Кассир вошёл',
+      cashier_logged_out: 'Кассир вышел',
+      cashier_login_check_error: 'Не удалось проверить вход кассира. Попробуйте обновить страницу.',
+      cashier_login_check_network_error: 'Ошибка сети при проверке входа кассира. Попробуйте обновить страницу.',
+      cashier_registering: 'Регистрация...',
+      cashier_registration_error: 'Ошибка регистрации',
+      cashier_registered: 'Клиент зарегистрирован',
+      cashier_bonus_no_rule: '0 (нет правила)',
+      cashier_write_report_failed: 'Не удалось записать продажу в отчётность',
+      cashier_accrual_error: 'Ошибка начисления',
+      cashier_redemption_error: 'Ошибка списания',
+      label_shift_id: 'Смена',
+      label_shift_start: 'Открыта',
+      label_shift_end: 'Закрыта',
+      label_duration_hours: 'Часов',
+      label_actor_type: 'Кто',
+      label_actor_name: 'Имя',
+      label_action: 'Действие',
+      label_entity_type: 'Сущность',
+      label_entity_id: 'ID',
+      label_details: 'Детали',
+      dashboard_title: 'Дашборд',
+      dashboard_subtitle: 'Сводная статистика системы лояльности',
+      dashboard_clients: 'Клиентов',
+      dashboard_transactions: 'Транзакций',
+      dashboard_bonus_issued: 'Бонусов выдано',
+      dashboard_revenue_week: 'Выручка за 7 дней',
+      dashboard_quick_links: 'Быстрые ссылки',
+      dashboard_open_cashier: 'Открыть кассу',
+      dashboard_configure_rules: 'Настроить правила',
+      dashboard_api_docs: 'API документация',
+      dashboard_news_title: 'Новости для клиентов',
+      dashboard_news_subtitle: 'Публикуйте общие уведомления для всех клиентов приложения',
+      dashboard_news_form_title: 'Новая новость',
+      dashboard_news_list_title: 'Отправленные новости',
+      dashboard_news_label_title: 'Заголовок',
+      dashboard_news_label_body: 'Текст новости',
+      dashboard_news_emoji_title: 'Смайлики для публикации',
+      dashboard_news_button: 'Отправить всем',
+      dashboard_news_empty: 'Новостей пока нет',
+      dashboard_news_delete: 'Удалить',
+      dashboard_news_edit: 'Редактировать',
+      dashboard_news_hide: 'Скрыть',
+      dashboard_news_show: 'Показать',
+      dashboard_news_status_active: 'Опубликована',
+      dashboard_news_status_inactive: 'Скрыта',
+      dashboard_news_update_button: 'Сохранить изменения',
+      dashboard_news_cancel_edit: 'Отмена',
+      dashboard_news_created: 'Опубликовано',
+      dashboard_news_fill: 'Заполните заголовок и текст новости',
+      dashboard_news_create_success: 'Новость отправлена всем клиентам',
+      dashboard_news_update_success: 'Новость обновлена',
+      dashboard_news_create_error: 'Не удалось опубликовать новость',
+      dashboard_news_update_error: 'Не удалось обновить новость',
+      dashboard_news_load_error: 'Не удалось загрузить новости',
+      dashboard_news_toggle_success: 'Статус новости обновлен',
+      dashboard_news_toggle_error: 'Не удалось обновить статус новости',
+      dashboard_news_delete_success: 'Новость удалена',
+      dashboard_news_delete_error: 'Не удалось удалить новость'
+    },
+    en: {
+      brand_name: 'AZS Bonus',
+      sidebar_main: 'Main',
+      sidebar_settings: 'Settings',
+      nav_cashier: 'Cash Desk',
+      nav_fuel_prices: 'Fuel Prices',
+      nav_clients: 'Clients',
+      nav_reports: 'Reports',
+      nav_dashboard: 'Dashboard',
+      nav_rules: 'Rules',
+      nav_cashiers: 'Cashiers',
+      admin_login_open: 'Admin Login',
+      admin_logout: 'Logout from Admin',
+      role_admin: 'Administrator',
+      role_cashier: 'Cashier',
+      role_admin_subtitle: 'Admin Panel',
+      role_cashier_subtitle: 'Station #1',
+      admin_login_modal_title: 'Administrator Login',
+      label_login: 'Login',
+      label_password: 'Password',
+      label_language: 'Language',
+      label_currency: 'Currency',
+      admin_login_help: 'The admin panel will open after login.',
+      button_cancel: 'Cancel',
+      button_login: 'Login',
+      button_logout: 'Logout',
+      button_show: 'Show',
+      button_excel: 'Excel',
+      admin_login_fill: 'Enter admin login and password',
+      admin_login_invalid: 'Invalid admin login or password',
+      admin_login_server_error: 'Failed to sign in to admin panel (server error)',
+      admin_login_network_error: 'Network error while signing in to admin panel',
+      admin_logout_error: 'Failed to log out from admin panel',
+      admin_logout_network_error: 'Network error while logging out from admin panel',
+      admin_button_dashboard: 'Admin Panel',
+      admin_login_checking: 'Checking...',
+      report_title: 'Reports',
+      report_subtitle: 'Sales and loyalty analytics',
+      period_from: 'Period from',
+      period_to: 'Period to',
+      report_type: 'Report type',
+      today: 'Today',
+      seven_days: '7 days',
+      thirty_days: '30 days',
+      current_month: 'Current month',
+      report_fuel_sales: 'Fuel Sales',
+      report_bonus_movement: 'Bonus Movement',
+      report_cashier_sales: 'Cashier Sales',
+      report_closed_shifts: 'Closed shifts',
+      report_action_log: 'Action log',
+      report_fuel_by_type: 'Fuel by Type',
+      period_label: 'Period',
+      no_data_period: 'No data for the selected period',
+      records_count: 'Records',
+      total: 'Total',
+      sales: 'Sales',
+      liters: 'Liters',
+      amount: 'Amount',
+      bonuses: 'Bonuses',
+      checks_amount: 'Checks amount',
+      label_date: 'Date',
+      label_price_per_liter: 'Price per liter',
+      label_fuel_type: 'Fuel type',
+      label_phone: 'Phone',
+      label_client_name: 'Client name',
+      label_type: 'Type',
+      label_receipt_amount: 'Receipt amount',
+      label_fuel_liters: 'Fuel liters',
+      label_location: 'Location',
+      label_check_id: 'Receipt number',
+      report_access_required: 'Sign in as cashier or administrator to view reports',
+      report_access_required_full: 'No access to reports. Sign in as cashier or administrator first.',
+      report_load_error: 'Failed to load report',
+      report_download_error: 'Failed to download report',
+      report_export_access_error: 'No access to report export',
+      cashier_page_title: 'Cash Desk',
+      cashier_page_subtitle: 'Create a receipt',
+      cashier_login_title: 'Cashier Login',
+      cashier_login_help: 'Enter the login and password provided by the administrator.',
+      cashier_shift_title: 'Cashier shift',
+      check_title: 'Receipt',
+      client_title: 'Client',
+      button_find: 'Find',
+      button_open_shift: 'Open shift',
+      button_close_shift: 'Close shift',
+      button_continue_without_client: 'Continue without client',
+      button_quick_registration: 'Quick registration',
+      button_register_and_continue: 'Register and continue',
+      button_other_client: 'Another client',
+      button_process_receipt: 'PROCESS RECEIPT',
+      button_processing: 'Processing...',
+      cashier_station: 'Station',
+      cashier_store: 'Store',
+      cashier_enter_receipt_amount: 'Enter the amount to create a receipt',
+      cashier_shift_operations: 'Shift operations',
+      cashier_no_operations: 'No operations yet',
+      cashier_shift_status_open: 'Shift is open',
+      cashier_shift_status_closed: 'Shift is closed',
+      cashier_shift_open_first: 'Open a shift before processing receipts and recording sales.',
+      cashier_shift_open_hint: 'The shift is active. Receipt processing is available.',
+      cashier_shift_opened: 'Shift opened',
+      cashier_shift_closed_done: 'Shift closed',
+      cashier_shift_started_at: 'Opened',
+      cashier_shift_duration: 'Duration',
+      cashier_shift_transactions: 'operations',
+      cashier_shift_bonus_accrued: 'Accrued',
+      cashier_shift_bonus_redeemed: 'Redeemed',
+      cashier_shift_fuel_amount: 'Fuel sales',
+      cashier_shift_fuel_liters: 'Liters',
+      cashier_shift_status_error: 'Failed to load shift status',
+      cashier_shift_open_error: 'Failed to open shift',
+      cashier_shift_close_error: 'Failed to close shift',
+      cashier_shift_close_confirm: 'Close the current shift?',
+      cashier_shift_last_closed: 'Last shift closed',
+      cashier_shift_last_summary: 'The totals of the last closed shift are shown.',
+      cashier_shift_required: 'Open a shift first',
+      cashier_cancel_receipt_title: 'Receipt cancellation',
+      cashier_cancel_receipt_hint: 'Enter the receipt number and optionally the cancellation reason.',
+      label_cancel_reason: 'Cancellation reason',
+      button_cancel_receipt: 'Cancel receipt',
+      cashier_cancel_receipt_fill: 'Enter a receipt number',
+      cashier_cancel_receipt_confirm: 'Cancel this receipt?',
+      cashier_cancel_receipt_success: 'Receipt cancelled',
+      cashier_cancel_receipt_error: 'Failed to cancel the receipt',
+      cashier_cancelled: 'Cancelled',
+      cashier_sum_to_pay: 'To pay',
+      cashier_receipt_done: 'Receipt completed',
+      cashier_without_client: 'Without client',
+      cashier_without_client_short: 'without client',
+      cashier_client_search_placeholder: 'Phone, name, or last 4 digits',
+      cashier_client_search_prompt: 'Enter a name, phone, or the last 4 digits',
+      cashier_client_search_multiple: 'Several clients were found. Refine the name or the last 4 digits of the phone.',
+      cashier_client_not_found: 'Client not found',
+      cashier_connection_error: 'Connection error',
+      cashier_signin_required: 'Sign in as cashier first',
+      cashier_login_failed: 'Sign in failed',
+      cashier_login_fill: 'Enter cashier login and password',
+      cashier_logged_in: 'Cashier signed in',
+      cashier_logged_out: 'Cashier signed out',
+      cashier_login_check_error: 'Failed to verify cashier sign-in. Refresh the page.',
+      cashier_login_check_network_error: 'Network error while verifying cashier sign-in. Refresh the page.',
+      cashier_registering: 'Registering...',
+      cashier_registration_error: 'Registration error',
+      cashier_registered: 'Client registered',
+      cashier_bonus_no_rule: '0 (no rule)',
+      cashier_write_report_failed: 'Failed to write sale to reporting',
+      cashier_accrual_error: 'Accrual error',
+      cashier_redemption_error: 'Redemption error',
+      label_shift_id: 'Shift',
+      label_shift_start: 'Opened',
+      label_shift_end: 'Closed',
+      label_duration_hours: 'Hours',
+      label_actor_type: 'Actor type',
+      label_actor_name: 'Actor',
+      label_action: 'Action',
+      label_entity_type: 'Entity',
+      label_entity_id: 'ID',
+      label_details: 'Details',
+      dashboard_title: 'Dashboard',
+      dashboard_subtitle: 'System loyalty summary',
+      dashboard_clients: 'Clients',
+      dashboard_transactions: 'Transactions',
+      dashboard_bonus_issued: 'Bonuses issued',
+      dashboard_revenue_week: 'Revenue for 7 days',
+      dashboard_quick_links: 'Quick links',
+      dashboard_open_cashier: 'Open cashier',
+      dashboard_configure_rules: 'Configure rules',
+      dashboard_api_docs: 'API docs',
+      dashboard_news_title: 'Client news',
+      dashboard_news_subtitle: 'Publish common notifications for all mobile app clients',
+      dashboard_news_form_title: 'New post',
+      dashboard_news_list_title: 'Published news',
+      dashboard_news_label_title: 'Title',
+      dashboard_news_label_body: 'News text',
+      dashboard_news_emoji_title: 'Emojis for post',
+      dashboard_news_button: 'Send to everyone',
+      dashboard_news_empty: 'No news yet',
+      dashboard_news_delete: 'Delete',
+      dashboard_news_edit: 'Edit',
+      dashboard_news_hide: 'Hide',
+      dashboard_news_show: 'Show',
+      dashboard_news_status_active: 'Published',
+      dashboard_news_status_inactive: 'Hidden',
+      dashboard_news_update_button: 'Save changes',
+      dashboard_news_cancel_edit: 'Cancel',
+      dashboard_news_created: 'Published',
+      dashboard_news_fill: 'Fill in the title and news text',
+      dashboard_news_create_success: 'The news has been sent to all clients',
+      dashboard_news_update_success: 'The news has been updated',
+      dashboard_news_create_error: 'Failed to publish the news',
+      dashboard_news_update_error: 'Failed to update the news',
+      dashboard_news_load_error: 'Failed to load news',
+      dashboard_news_toggle_success: 'The news status has been updated',
+      dashboard_news_toggle_error: 'Failed to update the news status',
+      dashboard_news_delete_success: 'The news has been deleted',
+      dashboard_news_delete_error: 'Failed to delete the news'
+    },
+    tg: {
+      brand_name: 'АЗС Бонус',
+      sidebar_main: 'Асосӣ',
+      sidebar_settings: 'Танзимот',
+      nav_cashier: 'Хазина',
+      nav_fuel_prices: 'Нархи сӯзишворӣ',
+      nav_clients: 'Мизоҷон',
+      nav_reports: 'Ҳисобот',
+      nav_dashboard: 'Панел',
+      nav_rules: 'Қоидаҳо',
+      nav_cashiers: 'Хазинадорон',
+      admin_login_open: 'Вуруди админ',
+      admin_logout: 'Баромад аз админка',
+      role_admin: 'Мудир',
+      role_cashier: 'Хазинадор',
+      role_admin_subtitle: 'Админка',
+      role_cashier_subtitle: 'АЗС №1',
+      admin_login_modal_title: 'Вуруди мудир',
+      label_login: 'Логин',
+      label_password: 'Рамз',
+      label_language: 'Забон',
+      label_currency: 'Асъор',
+      admin_login_help: 'Пас аз вуруд админка кушода мешавад.',
+      button_cancel: 'Бекор кардан',
+      button_login: 'Ворид шудан',
+      button_logout: 'Баромадан',
+      button_show: 'Намоиш',
+      button_excel: 'Excel',
+      admin_login_fill: 'Логин ва рамзи админро ворид кунед',
+      admin_login_invalid: 'Логин ё рамзи админ нодуруст аст',
+      admin_login_server_error: 'Воридшавӣ ба админка иҷро нашуд (хатои сервер)',
+      admin_login_network_error: 'Хатои шабака ҳангоми вуруд ба админка',
+      admin_logout_error: 'Баромадан аз админка иҷро нашуд',
+      admin_logout_network_error: 'Хатои шабака ҳангоми баромадан аз админка',
+      admin_button_dashboard: 'Админка',
+      admin_login_checking: 'Санҷиш...',
+      report_title: 'Ҳисобот',
+      report_subtitle: 'Таҳлили фурӯш ва барномаи бонусӣ',
+      period_from: 'Аз сана',
+      period_to: 'То сана',
+      report_type: 'Навъи ҳисобот',
+      today: 'Имрӯз',
+      seven_days: '7 рӯз',
+      thirty_days: '30 рӯз',
+      current_month: 'Моҳи ҷорӣ',
+      report_fuel_sales: 'Фурӯши сӯзишворӣ',
+      report_bonus_movement: 'Ҳаракати бонусҳо',
+      report_cashier_sales: 'Фурӯш аз рӯи хазинадор',
+      report_closed_shifts: 'Бастҳои пӯшида',
+      report_action_log: 'Журнали амалҳо',
+      report_fuel_by_type: 'Сӯзишворӣ аз рӯи намуд',
+      period_label: 'Давра',
+      no_data_period: 'Барои ин давра маълумот нест',
+      records_count: 'Сабтҳо',
+      total: 'Ҷамъ',
+      sales: 'Фурӯш',
+      liters: 'Литр',
+      amount: 'Маблағ',
+      bonuses: 'Бонусҳо',
+      checks_amount: 'Маблағи чекҳо',
+      label_date: 'Сана',
+      label_price_per_liter: 'Нарх барои 1 литр',
+      label_fuel_type: 'Навъи сӯзишворӣ',
+      label_phone: 'Телефон',
+      label_client_name: 'Номи мизоҷ',
+      label_type: 'Навъ',
+      label_receipt_amount: 'Маблағи чек',
+      label_fuel_liters: 'Литри сӯзишворӣ',
+      label_location: 'Ҷой',
+      label_check_id: 'Рақами чек',
+      report_access_required: 'Барои дидани ҳисобот ҳамчун хазинадор ё мудир ворид шавед',
+      report_access_required_full: 'Ба ҳисобот дастрасӣ нест. Аввал ҳамчун хазинадор ё мудир ворид шавед.',
+      report_load_error: 'Боркунии ҳисобот иҷро нашуд',
+      report_download_error: 'Боргирии ҳисобот иҷро нашуд',
+      report_export_access_error: 'Ба боргирии ҳисобот дастрасӣ нест',
+      cashier_page_title: 'Хазина',
+      cashier_page_subtitle: 'Омода кардани чек',
+      cashier_login_title: 'Вуруди хазинадор',
+      cashier_login_help: 'Логин ва рамзи аз ҷониби мудир додашударо ворид кунед.',
+      cashier_shift_title: 'Басти хазинадор',
+      check_title: 'Чек',
+      client_title: 'Мизоҷ',
+      button_find: 'Ёфтан',
+      button_open_shift: 'Кушодани баст',
+      button_close_shift: 'Бастани баст',
+      button_continue_without_client: 'Идома бе мизоҷ',
+      button_quick_registration: 'Сабти зуд',
+      button_register_and_continue: 'Сабт ва идома',
+      button_other_client: 'Мизоҷи дигар',
+      button_process_receipt: 'ГУЗАРОНИДАНИ ЧЕК',
+      button_processing: 'Дар ҳоли иҷро...',
+      cashier_station: 'АЗС',
+      cashier_store: 'Мағоза',
+      cashier_enter_receipt_amount: 'Барои тартиб додани чек маблағро ворид кунед',
+      cashier_shift_operations: 'Амалиётҳои баст',
+      cashier_no_operations: 'Ҳанӯз амалиёт нест',
+      cashier_shift_status_open: 'Баст кушода аст',
+      cashier_shift_status_closed: 'Баст баста аст',
+      cashier_shift_open_first: 'Пеш аз гузаронидани чек ва сабти фурӯш бастро кушоед.',
+      cashier_shift_open_hint: 'Баст фаъол аст. Гузаронидани чек дастрас аст.',
+      cashier_shift_opened: 'Баст кушода шуд',
+      cashier_shift_closed_done: 'Баст баста шуд',
+      cashier_shift_started_at: 'Кушода шуд',
+      cashier_shift_duration: 'Давомнокӣ',
+      cashier_shift_transactions: 'амалиёт',
+      cashier_shift_bonus_accrued: 'Ҳисоб шуд',
+      cashier_shift_bonus_redeemed: 'Ҳисоббарорӣ шуд',
+      cashier_shift_fuel_amount: 'Фурӯши сӯзишворӣ',
+      cashier_shift_fuel_liters: 'Литр',
+      cashier_shift_status_error: 'Боркунии ҳолати баст иҷро нашуд',
+      cashier_shift_open_error: 'Кушодани баст иҷро нашуд',
+      cashier_shift_close_error: 'Бастани баст иҷро нашуд',
+      cashier_shift_close_confirm: 'Басти ҷориро бандем?',
+      cashier_shift_last_closed: 'Басти охирин баста шуд',
+      cashier_shift_last_summary: 'Натиҷаҳои басти охирини баста нишон дода мешаванд.',
+      cashier_shift_required: 'Аввал бастро кушоед',
+      cashier_cancel_receipt_title: 'Бозгашт / бекоркунии чек',
+      cashier_cancel_receipt_hint: 'Рақами чек ва агар лозим бошад сабаби бекоркуниро ворид кунед.',
+      label_cancel_reason: 'Сабаби бекоркунӣ',
+      button_cancel_receipt: 'Бекор кардани чек',
+      cashier_cancel_receipt_fill: 'Рақами чекро ворид кунед',
+      cashier_cancel_receipt_confirm: 'Ин чекро бекор кунем?',
+      cashier_cancel_receipt_success: 'Чек бекор шуд',
+      cashier_cancel_receipt_error: 'Бекор кардани чек иҷро нашуд',
+      cashier_cancelled: 'Бекор шуд',
+      cashier_sum_to_pay: 'Барои пардохт',
+      cashier_receipt_done: 'Чек гузаронда шуд',
+      cashier_without_client: 'Бе мизоҷ',
+      cashier_without_client_short: 'бе мизоҷ',
+      cashier_client_search_placeholder: 'Телефон, ном ё 4 рақами охир',
+      cashier_client_search_prompt: 'Ном, телефон ё 4 рақами охирро ворид кунед',
+      cashier_client_search_multiple: 'Якчанд мизоҷ ёфт шуд. Ном ё 4 рақами охири телефонро дақиқ кунед.',
+      cashier_client_not_found: 'Мизоҷ ёфт нашуд',
+      cashier_connection_error: 'Хатои пайвастшавӣ',
+      cashier_signin_required: 'Аввал ҳамчун хазинадор ворид шавед',
+      cashier_login_failed: 'Вуруд иҷро нашуд',
+      cashier_login_fill: 'Логин ва рамзи хазинадорро ворид кунед',
+      cashier_logged_in: 'Хазинадор ворид шуд',
+      cashier_logged_out: 'Хазинадор баромад',
+      cashier_login_check_error: 'Санҷиши вуруди хазинадор иҷро нашуд. Саҳифаро аз нав бор кунед.',
+      cashier_login_check_network_error: 'Хатои шабака ҳангоми санҷиши вуруди хазинадор. Саҳифаро аз нав бор кунед.',
+      cashier_registering: 'Сабт шуда истодааст...',
+      cashier_registration_error: 'Хатои сабт',
+      cashier_registered: 'Мизоҷ сабт шуд',
+      cashier_bonus_no_rule: '0 (қоида нест)',
+      cashier_write_report_failed: 'Сабти фурӯш ба ҳисобот иҷро нашуд',
+      cashier_accrual_error: 'Хатои ҳисобкунӣ',
+      cashier_redemption_error: 'Хатои ҳисоббарорӣ',
+      label_shift_id: 'Баст',
+      label_shift_start: 'Кушода шуд',
+      label_shift_end: 'Пӯшида шуд',
+      label_duration_hours: 'Соат',
+      label_actor_type: 'Кӣ',
+      label_actor_name: 'Ном',
+      label_action: 'Амал',
+      label_entity_type: 'Объект',
+      label_entity_id: 'ID',
+      label_details: 'Тафсилот',
+      dashboard_title: 'Панел',
+      dashboard_subtitle: 'Омори ҷамъбастии низоми вафодорӣ',
+      dashboard_clients: 'Мизоҷон',
+      dashboard_transactions: 'Амалиётҳо',
+      dashboard_bonus_issued: 'Бонусҳои додашуда',
+      dashboard_revenue_week: 'Даромад барои 7 рӯз',
+      dashboard_quick_links: 'Пайвандҳои зуд',
+      dashboard_open_cashier: 'Кушодани хазина',
+      dashboard_configure_rules: 'Танзими қоидаҳо',
+      dashboard_api_docs: 'Ҳуҷҷатҳои API',
+      dashboard_news_title: 'Хабарҳо барои мизоҷон',
+      dashboard_news_subtitle: 'Огоҳиномаҳои умумиро барои ҳамаи мизоҷони барнома нашр кунед',
+      dashboard_news_form_title: 'Хабари нав',
+      dashboard_news_list_title: 'Хабарҳои фиристодашуда',
+      dashboard_news_label_title: 'Сарлавҳа',
+      dashboard_news_label_body: 'Матни хабар',
+      dashboard_news_emoji_title: 'Смайликҳо барои нашр',
+      dashboard_news_button: 'Ба ҳама фиристодан',
+      dashboard_news_empty: 'Ҳоло хабар нест',
+      dashboard_news_delete: 'Нест кардан',
+      dashboard_news_edit: 'Таҳрир кардан',
+      dashboard_news_hide: 'Пинҳон кардан',
+      dashboard_news_show: 'Нишон додан',
+      dashboard_news_status_active: 'Нашр шудааст',
+      dashboard_news_status_inactive: 'Пинҳон аст',
+      dashboard_news_update_button: 'Тағйиротро нигоҳ доред',
+      dashboard_news_cancel_edit: 'Бекор кардан',
+      dashboard_news_created: 'Нашр шуд',
+      dashboard_news_fill: 'Сарлавҳа ва матни хабарро пур кунед',
+      dashboard_news_create_success: 'Хабар ба ҳамаи мизоҷон фиристода шуд',
+      dashboard_news_update_success: 'Хабар нав шуд',
+      dashboard_news_create_error: 'Нашри хабар иҷро нашуд',
+      dashboard_news_update_error: 'Навсозии хабар иҷро нашуд',
+      dashboard_news_load_error: 'Боркунии хабарҳо иҷро нашуд',
+      dashboard_news_toggle_success: 'Ҳолати хабар нав шуд',
+      dashboard_news_toggle_error: 'Навсозии ҳолати хабар иҷро нашуд',
+      dashboard_news_delete_success: 'Хабар нест карда шуд',
+      dashboard_news_delete_error: 'Нест кардани хабар иҷро нашуд'
+    }
+  };
+  const APP_CURRENCIES = {
+    RUB: { symbol: '₽', position: 'after' },
+    USD: { symbol: '$', position: 'before' },
+    TJS: { symbol: 'сомони', position: 'after' }
+  };
+  const APP_TIMEZONE = 'Asia/Dushanbe';
+
+  function normalizePreferencePart(value, fallback = 'guest') {
+    const normalized = (value ?? '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/gi, '-')
+      .replace(/^-+|-+$/g, '');
+    return normalized || fallback;
+  }
+
+  function normalizePreferenceScope(scope) {
+    const raw = (scope ?? '').toString().trim().toLowerCase();
+    if (!raw) return null;
+    const [kind, ...rest] = raw.split(':');
+    return `${normalizePreferencePart(kind, 'public')}:${normalizePreferencePart(rest.join(':') || 'guest', 'guest')}`;
+  }
+
+  function isAdminUi() {
+    return document.body.dataset.showAdminMenu === '1';
+  }
+
+  function isCashierUi() {
+    const path = window.location.pathname;
+    return path === '/cashier'
+      || path.startsWith('/cashier/')
+      || path === '/fuel-prices'
+      || path === '/reports';
+  }
+
+  function getStoredIdentity(storageKey, fallback = 'guest') {
+    return normalizePreferencePart(localStorage.getItem(storageKey), fallback);
+  }
+
+  function getUiPreferenceScope() {
+    if (uiPreferenceScopeOverride) return uiPreferenceScopeOverride;
+    if (isAdminUi()) {
+      return `admin:${getStoredIdentity(LS_ADMIN_IDENTITY, 'main')}`;
+    }
+    if (isCashierUi()) {
+      const cashierToken = localStorage.getItem('azs_cashier_token');
+      if (cashierToken) {
+        return `cashier:${getStoredIdentity(LS_CASHIER_IDENTITY, 'active')}`;
+      }
+      return 'cashier:guest';
+    }
+    return 'public:guest';
+  }
+
+  function getScopedPreferenceKey(baseKey) {
+    return `${baseKey}::${getUiPreferenceScope()}`;
+  }
+
+  function readScopedPreference(baseKey, defaultValue) {
+    return localStorage.getItem(getScopedPreferenceKey(baseKey)) || defaultValue;
+  }
+
+  function writeScopedPreference(baseKey, value) {
+    localStorage.setItem(getScopedPreferenceKey(baseKey), value);
+  }
+
+  function getCurrentLanguage() {
+    return readScopedPreference(LS_UI_LANGUAGE, 'ru');
+  }
+
+  function getCurrentCurrency() {
+    return readScopedPreference(LS_UI_CURRENCY, 'RUB');
+  }
+
+  function getCurrentLocale() {
+    const lang = getCurrentLanguage();
+    return ({ ru: 'ru-RU', en: 'en-US', tg: 'tg-TJ' })[lang] || 'ru-RU';
+  }
+
+  function t(key, fallback = '') {
+    const lang = getCurrentLanguage();
+    return (APP_I18N[lang] && APP_I18N[lang][key]) || APP_I18N.ru[key] || fallback || key;
+  }
+
+  function getCurrencySymbol() {
+    const code = getCurrentCurrency();
+    return (APP_CURRENCIES[code] || APP_CURRENCIES.RUB).symbol;
+  }
+
+  function formatNumber(value, digits = 2) {
+    const num = typeof value === 'number' ? value : parseFloat(value);
+    if (!isFinite(num)) return '—';
+    return num.toLocaleString(getCurrentLocale(), {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits
+    });
+  }
+
+  function formatMoney(value, digits = 2) {
+    const formatted = formatNumber(value, digits);
+    if (formatted === '—') return formatted;
+    const currency = APP_CURRENCIES[getCurrentCurrency()] || APP_CURRENCIES.RUB;
+    return currency.position === 'before'
+      ? `${currency.symbol}${formatted}`
+      : `${formatted} ${currency.symbol}`;
+  }
+
+  function formatDateTime(value, options = {}) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleString(getCurrentLocale(), {
+      timeZone: APP_TIMEZONE,
+      ...options,
+    });
+  }
+
+  function formatTime(value, options = {}) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleTimeString(getCurrentLocale(), {
+      timeZone: APP_TIMEZONE,
+      ...options,
+    });
+  }
+
+  function formatPricePerLiter(value, digits = 2) {
+    return `${formatMoney(value, digits)}/л`;
+  }
+
+  function applyI18n(root = document) {
+    document.documentElement.lang = getCurrentLanguage();
+
+    root.querySelectorAll('[data-i18n]').forEach((el) => {
+      const key = el.dataset.i18n;
+      const altKey = el.dataset.i18nAlt;
+      if (altKey && el.textContent.trim()) {
+        const isAdmin = document.body.dataset.showAdminMenu === '1';
+        el.textContent = t(isAdmin ? key : altKey, el.textContent.trim());
+        return;
+      }
+      el.textContent = t(key, el.textContent.trim());
+    });
+
+    const langSelect = document.getElementById('ui-language');
+    const currencySelect = document.getElementById('ui-currency');
+    if (langSelect) langSelect.value = getCurrentLanguage();
+    if (currencySelect) currencySelect.value = getCurrentCurrency();
+  }
+
+  function refreshUiPreferences(emitEvent = true) {
+    applyI18n();
+    if (emitEvent) {
+      window.dispatchEvent(new CustomEvent('app:locale-changed'));
+    }
+  }
+
+  function setPreferenceScope(scope, emitEvent = true) {
+    uiPreferenceScopeOverride = normalizePreferenceScope(scope);
+    refreshUiPreferences(emitEvent);
+  }
+
+  function clearPreferenceScope(emitEvent = true) {
+    uiPreferenceScopeOverride = null;
+    refreshUiPreferences(emitEvent);
+  }
+
+  window.appI18n = {
+    t,
+    formatMoney,
+    formatNumber,
+    formatPricePerLiter,
+    formatDateTime,
+    formatTime,
+    getCurrentLanguage,
+    getCurrentCurrency,
+    getCurrentLocale,
+    getCurrencySymbol,
+    getPreferenceScope: getUiPreferenceScope,
+    setPreferenceScope,
+    clearPreferenceScope,
+    refreshPreferences: refreshUiPreferences,
+    applyI18n,
+  };
+
+  // Active nav link
+  const path = window.location.pathname;
+  document.querySelectorAll('.sidebar .nav-link[data-path]').forEach(a => {
+    if (path === a.dataset.path || (a.dataset.path !== '/' && path.startsWith(a.dataset.path))) {
+      a.classList.add('active');
+    }
+  });
+
+  // Global toast helper
+  function showToast(msg, type = 'success') {
+    const icons = {success: 'check-circle-fill', danger: 'x-circle-fill', warning: 'exclamation-triangle-fill', info: 'info-circle-fill'};
+    const id = 'toast-' + Date.now();
+    const html = `
+      <div id="${id}" class="toast align-items-center text-bg-${type} border-0 shadow" role="alert" aria-live="assertive">
+        <div class="d-flex">
+          <div class="toast-body d-flex align-items-center gap-2">
+            <i class="bi bi-${icons[type] || 'info-circle-fill'}"></i>
+            <span>${msg}</span>
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      </div>`;
+    document.getElementById('toast-container').insertAdjacentHTML('beforeend', html);
+    const el = document.getElementById(id);
+    const toast = new bootstrap.Toast(el, {delay: 4000});
+    toast.show();
+    el.addEventListener('hidden.bs.toast', () => el.remove());
+  }
+
+  window.addEventListener('azs:offline-queue-flushed', (event) => {
+    const flushed = Number(event.detail?.flushed || 0);
+    if (flushed > 0) {
+      showToast(`Отложенные изменения отправлены: ${flushed}`, 'success');
+    }
+  });
+
+  window.addEventListener('azs:offline-queued', () => {
+    showToast('Связь слабая. Изменение поставлено в очередь', 'warning');
+  });
+
+  // Global fetch helper
+  async function apiPost(url, data) {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
+    });
+    return r;
+  }
+
+  (function initAdminLogout() {
+    const logoutBtn = document.getElementById('admin-logout-btn');
+    if (!logoutBtn) return;
+
+    logoutBtn.addEventListener('click', async () => {
+      logoutBtn.disabled = true;
+      try {
+        const r = await fetch('/api/admin/logout', {
+          method: 'POST',
+          credentials: 'include'
+        });
+        if (!r.ok) {
+          showToast(t('admin_logout_error'), 'danger');
+          return;
+        }
+        window.location.href = '/staff-login?role=admin';
+      } catch {
+        showToast(t('admin_logout_network_error'), 'danger');
+      } finally {
+        logoutBtn.disabled = false;
+      }
+    });
+  })();
+
+  // Admin login (cookie session) from cashier UI
+  (function initAdminLogin() {
+    const openBtn = document.getElementById('admin-login-open');
+    const modalEl = document.getElementById('adminLoginModal');
+    const form = document.getElementById('admin-login-form');
+    if (!openBtn || !modalEl || !form) return;
+
+    const usernameEl = document.getElementById('admin-username');
+    const passwordEl = document.getElementById('admin-password');
+    const submitBtn = document.getElementById('admin-login-submit');
+    const modal = new bootstrap.Modal(modalEl);
+    let adminActive = false;
+
+    async function refreshAdminButton() {
+      try {
+        const r = await fetch('/api/admin/ping', { method: 'GET', credentials: 'include' });
+        if (r.ok) {
+          adminActive = true;
+          openBtn.innerHTML = `<i class="bi bi-speedometer2"></i> ${t('admin_button_dashboard')}`;
+          return true;
+        }
+      } catch {}
+      return false;
+    }
+
+    openBtn.addEventListener('click', () => {
+      if (adminActive) {
+        window.location.href = '/admin';
+        return;
+      }
+      window.location.href = '/staff-login?role=admin&next=/admin';
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = (usernameEl?.value || '').trim();
+      const password = passwordEl?.value || '';
+      if (!username || !password) {
+        showToast(t('admin_login_fill'), 'warning');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerText = t('admin_login_checking');
+      try {
+        const r = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ username, password })
+        });
+        if (r.ok) {
+          localStorage.setItem(LS_ADMIN_IDENTITY, normalizePreferencePart(username, 'main'));
+          window.location.href = '/admin';
+          return;
+        }
+        if (r.status === 401) {
+          showToast(t('admin_login_invalid'), 'danger');
+          passwordEl.value = '';
+          passwordEl.focus();
+          return;
+        }
+        showToast(t('admin_login_server_error'), 'danger');
+      } catch (err) {
+        showToast(t('admin_login_network_error'), 'danger');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = t('button_login');
+      }
+    });
+
+    // Если админ уже залогинен — не просим логин/пароль
+    refreshAdminButton();
+  })();
+
+  (function initUiPreferences() {
+    const langSelect = document.getElementById('ui-language');
+    const currencySelect = document.getElementById('ui-currency');
+
+    if (langSelect) {
+      langSelect.value = getCurrentLanguage();
+      langSelect.addEventListener('change', () => {
+        writeScopedPreference(LS_UI_LANGUAGE, langSelect.value);
+        refreshUiPreferences();
+      });
+    }
+
+    if (currencySelect) {
+      currencySelect.value = getCurrentCurrency();
+      currencySelect.addEventListener('change', () => {
+        writeScopedPreference(LS_UI_CURRENCY, currencySelect.value);
+        refreshUiPreferences();
+      });
+    }
+
+    refreshUiPreferences(false);
+  })();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

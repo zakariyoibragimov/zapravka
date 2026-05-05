@@ -1,0 +1,2026 @@
+{% extends "base.html" %}
+{% block title %}Касса — АЗС Бонус{% endblock %}
+{% block head %}
+<style>
+  /* ── Шапка ────────────────────────────────────────────────────────── */
+  .cashier-header { background:#fff; border-radius:16px; padding:1rem 1.5rem;
+    box-shadow:0 1px 4px rgba(0,0,0,.07); margin-bottom:1rem;
+    display:flex; align-items:center; justify-content:space-between; }
+
+  /* ── Карточки панелей ─────────────────────────────────────────────── */
+  .panel-card { background:#fff; border-radius:16px; box-shadow:0 1px 4px rgba(0,0,0,.07); overflow:hidden; }
+  .panel-head { padding:.75rem 1.2rem; font-weight:700; font-size:.9rem;
+    letter-spacing:.04em; text-transform:uppercase; }
+  .panel-body { padding:1.2rem; }
+
+  /* ── Большие поля ─────────────────────────────────────────────────── */
+  .big-input { font-size:2rem !important; font-weight:800 !important; height:64px !important;
+    border-radius:12px !important; text-align:right; color:#0d6efd !important; }
+  .big-input::placeholder { color:#ccc !important; font-size:1.5rem !important; }
+
+  /* ── Переключатель типа ───────────────────────────────────────────── */
+  .loc-toggle .btn { font-weight:600; padding:.5rem 1.2rem; border-radius:10px !important; }
+
+  /* ── Топливный блок ───────────────────────────────────────────────── */
+  .fuel-block { background:#f0f7ff; border:1.5px solid #cce0ff; border-radius:12px; padding:1rem; }
+  .fuel-quick-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+    gap:.75rem;
+  }
+  .fuel-quick-card {
+    border:1.5px solid var(--fuel-border, #cce0ff);
+    border-radius:16px;
+    background:linear-gradient(180deg, var(--fuel-bg, #ffffff), #ffffff);
+    padding:.9rem;
+    min-height:108px;
+    text-align:left;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    gap:.75rem;
+    transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+    box-shadow:0 4px 12px rgba(13,110,253,.06);
+  }
+  .fuel-quick-card:hover {
+    transform:translateY(-1px);
+    box-shadow:0 10px 24px rgba(13,110,253,.12);
+  }
+  .fuel-quick-card.active {
+    border-color:var(--fuel-accent, #0d6efd);
+    box-shadow:0 0 0 2px color-mix(in srgb, var(--fuel-accent, #0d6efd) 20%, transparent), 0 12px 26px rgba(13,110,253,.16);
+  }
+  .fuel-quick-top {
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:.65rem;
+  }
+  .fuel-quick-icon {
+    width:40px;
+    height:40px;
+    border-radius:12px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid var(--fuel-border, #cce0ff);
+    font-size:1.05rem;
+    color:var(--fuel-accent, #0d6efd);
+    background:rgba(255,255,255,.7);
+    flex-shrink:0;
+  }
+  .fuel-quick-price {
+    font-size:.82rem;
+    color:#4b5563;
+    text-align:right;
+    font-weight:700;
+  }
+  .fuel-quick-title {
+    font-weight:800;
+    font-size:1.05rem;
+    color:#0f172a;
+    line-height:1.1;
+  }
+  .fuel-quick-subtitle {
+    font-size:.78rem;
+    color:#64748b;
+    line-height:1.25;
+  }
+  .fuel-select-fallback {
+    font-size:.74rem;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    color:#64748b;
+    font-weight:700;
+    margin-bottom:.4rem;
+  }
+
+  /* ── Клиент: найден ───────────────────────────────────────────────── */
+  .client-found-block { background:#e8f5e9; border-radius:12px; padding:1rem; }
+  .client-avatar { width:52px; height:52px; border-radius:50%;
+    background:linear-gradient(135deg,#0d6efd,#0856d6);
+    color:#fff; font-size:1.2rem; font-weight:800;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    background-size:cover; background-position:center; background-repeat:no-repeat;
+    overflow:hidden; }
+
+  /* ── Редим списания ───────────────────────────────────────────────── */
+  .redeem-block { background:#fff8e1; border:1.5px solid #ffc107; border-radius:12px; padding:.9rem; }
+
+  /* ── Кнопка ПРОВЕСТИ ─────────────────────────────────────────────── */
+  .btn-proceed { border-radius:14px; font-size:1.2rem; font-weight:800;
+    padding:1rem; letter-spacing:.02em; transition:all .2s; }
+  .btn-proceed:not(:disabled):hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(25,135,84,.35); }
+
+  /* ── История ─────────────────────────────────────────────────────── */
+  .op-row { display:flex; justify-content:space-between; align-items:center;
+    padding:.55rem 0; border-bottom:1px solid #f0f0f0; }
+  .op-row:last-child { border-bottom:none; }
+
+  /* ── Сводка ──────────────────────────────────────────────────────── */
+  .summary-chip { background:#f8f9fa; border-radius:10px; padding:.5rem .9rem;
+    font-size:.85rem; display:inline-flex; align-items:center; gap:.4rem; }
+  .client-search-wrap { position: relative; }
+  .client-search-suggestions {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 20;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 14px;
+    box-shadow: 0 10px 28px rgba(0,0,0,.12);
+    padding: .35rem;
+  }
+  .client-search-suggestion {
+    width: 100%;
+    border: none;
+    background: transparent;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .55rem .65rem;
+    text-align: left;
+  }
+  .client-search-suggestion:hover,
+  .client-search-suggestion.active {
+    background: #f3f7ff;
+  }
+  .client-search-suggestion-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,#0d6efd,#0856d6);
+    color: #fff;
+    font-size: .82rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+  .client-search-suggestion-meta {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .client-search-suggestion-meta .fw-semibold,
+  .client-search-suggestion-meta .text-muted {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @media (min-width: 768px) and (max-width: 1100px) {
+    .main-content {
+      padding: 1rem 1rem 1.25rem;
+    }
+
+    .cashier-header {
+      padding: .9rem 1rem;
+      gap: .85rem;
+    }
+
+    .cashier-header .btn,
+    .cashier-header .badge,
+    .cashier-header .form-control {
+      flex-shrink: 0;
+    }
+
+    .panel-head {
+      padding: .7rem 1rem;
+    }
+
+    .panel-body {
+      padding: 1rem;
+    }
+
+    .big-input {
+      font-size: 1.55rem !important;
+      height: 58px !important;
+    }
+
+    .fuel-block {
+      padding: .85rem;
+    }
+
+    .fuel-quick-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: .6rem;
+    }
+
+    .fuel-quick-card {
+      min-height: 94px;
+      padding: .75rem;
+      border-radius: 14px;
+    }
+
+    .fuel-quick-title {
+      font-size: .98rem;
+    }
+
+    .fuel-quick-subtitle,
+    .fuel-quick-price {
+      font-size: .74rem;
+    }
+
+    .client-found-block {
+      align-items: flex-start !important;
+      flex-wrap: wrap;
+    }
+
+    #cashierAppContent {
+      --bs-gutter-x: .85rem;
+    }
+  }
+
+  @media (min-width: 768px) and (max-width: 900px) {
+    .sidebar {
+      width: 200px;
+    }
+
+    .main-content {
+      padding: .85rem .85rem 1rem;
+    }
+
+    .btn-proceed {
+      font-size: 1.05rem;
+      padding: .9rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Шапка -->
+<div class="cashier-header">
+  <div>
+    <h4 class="mb-0 fw-bold"><i class="bi bi-cash-register me-2 text-primary"></i><span data-i18n="cashier_page_title">Касса</span></h4>
+    <div class="text-muted small" data-i18n="cashier_page_subtitle">Оформление чека</div>
+  </div>
+  <div class="d-flex align-items-center gap-3">
+    <span id="clockBadge" class="badge bg-light text-dark border fs-6 px-3 py-2"></span>
+
+    <!-- Авторизация кассира -->
+    <div id="cashierAuthLoggedOut" class="d-flex align-items-center gap-2">
+      <button class="btn btn-sm btn-primary" type="button" onclick="window.location.href='/staff-login?role=cashier&next=/cashier'">
+        <i class="bi bi-box-arrow-in-right me-1"></i><span data-i18n="button_login">Войти</span>
+      </button>
+    </div>
+
+    <div id="cashierAuthLoggedIn" class="d-none align-items-center gap-2">
+      <span id="cashierBadge" class="badge bg-primary-subtle text-primary border"></span>
+      <button class="btn btn-sm btn-outline-secondary" onclick="cashierLogout()">
+        <i class="bi bi-box-arrow-right me-1"></i><span data-i18n="button_logout">Выйти</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="cashierShiftPanel" class="panel-card mb-3 d-none">
+  <div class="panel-body py-3">
+    <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3">
+      <div>
+        <div class="fw-semibold small text-uppercase text-muted" style="letter-spacing:.04em">
+          <i class="bi bi-stopwatch me-1"></i><span data-i18n="cashier_shift_title">Смена кассира</span>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+          <span id="cashierShiftBadge" class="badge rounded-pill bg-secondary-subtle text-secondary border">Смена закрыта</span>
+          <span id="cashierShiftStarted" class="text-muted small"></span>
+          <span id="cashierShiftDuration" class="text-muted small"></span>
+        </div>
+        <div id="cashierShiftHint" class="text-muted small mt-2"></div>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <button id="btnShiftOpen" class="btn btn-success btn-sm" onclick="openCashierShift()">
+          <i class="bi bi-play-circle me-1"></i><span data-i18n="button_open_shift">Открыть смену</span>
+        </button>
+        <button id="btnShiftClose" class="btn btn-outline-danger btn-sm" onclick="closeCashierShift()">
+          <i class="bi bi-stop-circle me-1"></i><span data-i18n="button_close_shift">Закрыть смену</span>
+        </button>
+      </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2 mt-3">
+      <span class="summary-chip"><i class="bi bi-receipt"></i><span id="shiftSummarySalesCount">Продаж: 0</span></span>
+      <span class="summary-chip"><i class="bi bi-plus-circle"></i><span id="shiftSummaryAccrued">Начислено: 0</span></span>
+      <span class="summary-chip"><i class="bi bi-dash-circle"></i><span id="shiftSummaryRedeemed">Списано: 0</span></span>
+      <span class="summary-chip"><i class="bi bi-fuel-pump"></i><span id="shiftSummaryFuelLiters">Литров: 0</span></span>
+      <span class="summary-chip"><i class="bi bi-cash-stack"></i><span id="shiftSummaryFuelAmount">Сумма: 0</span></span>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно: вход кассира -->
+<div class="modal fade" id="cashierLoginModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-person-badge me-2"></i><span data-i18n="cashier_login_title">Вход кассира</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2 text-muted small" data-i18n="cashier_login_help">
+          Введите логин и пароль, которые выдал администратор.
+        </div>
+        <div class="mb-3">
+          <label class="form-label" data-i18n="label_login">Логин</label>
+          <input id="cashierUsername" class="form-control" placeholder="Например: cashier1" autocomplete="username">
+        </div>
+        <div class="mb-3">
+          <label class="form-label" data-i18n="label_password">Пароль</label>
+          <input id="cashierPassword" type="password" class="form-control" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <div class="d-grid">
+          <button id="btnCashierLogin" class="btn btn-primary" onclick="cashierLogin()">
+            <i class="bi bi-box-arrow-in-right me-1"></i><span data-i18n="button_login">Войти</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно: QR клиента -->
+<div class="modal fade" id="qrModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-qr-code-scan me-2"></i>QR клиента</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-muted small mb-3">
+          Отсканируйте QR-код клиента сканером или вставьте данные вручную.
+        </div>
+        <div class="bg-light rounded-3 d-flex align-items-center justify-content-center mb-3"
+             style="height:180px;border:2px dashed #dee2e6;">
+          <div class="text-center text-muted">
+            <i class="bi bi-upc-scan fs-1 d-block mb-2 opacity-50"></i>
+            <div class="small">Ожидание данных от сканера</div>
+            <div class="small opacity-75">Можно вставить телефон или строку QR вручную</div>
+          </div>
+        </div>
+        <label class="form-label small fw-semibold">Данные QR-кода</label>
+        <input type="text" id="qrInput" class="form-control" placeholder="+7 (900) 123-45-67 / +992 90 123 45 67">
+        <div class="form-text">Поддерживается номер телефона клиента или данные, считанные со сканера.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" onclick="applyQr()">
+          <i class="bi bi-check-lg me-1"></i>Применить
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="clientQrPreviewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-qr-code me-2"></i>QR клиента</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center">
+        <div class="text-muted small mb-3">
+          Покажите клиенту этот QR, чтобы он сфотографировал его и в следующий раз быстро показал для списания или начисления бонусов.
+        </div>
+        <div class="border rounded-4 bg-light p-3">
+          <img id="clientQrPreviewImage" src="" alt="QR клиента" class="img-fluid rounded-3 border bg-white p-2" style="display:none;max-width:220px;">
+          <div id="clientQrPreviewEmpty" class="text-muted small py-4">QR-код клиента появится после выбора клиента</div>
+          <div class="fw-semibold mt-3" id="clientQrPreviewPhone">—</div>
+          <div class="text-muted small mt-2">Клиент может сохранить этот экран как фото и показать его в следующий раз.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="cashierAppContent" class="row g-3 align-items-start" style="display:none">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       ЧЕК — левая колонка
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="col-xl-5 col-lg-5 col-md-5">
+    <div class="panel-card">
+      <div class="panel-head bg-primary text-white">
+        <i class="bi bi-receipt me-2"></i><span data-i18n="check_title">Чек</span>
+      </div>
+      <div class="panel-body">
+
+        <!-- Тип продажи -->
+        <div class="mb-3">
+          <div class="loc-toggle btn-group w-100" role="group">
+            <input type="radio" class="btn-check" name="locType" id="locFuel" value="fuel" checked>
+            <label class="btn btn-outline-primary w-50" for="locFuel">
+              <i class="bi bi-fuel-pump me-1"></i><span data-i18n="cashier_station">АЗС</span>
+            </label>
+            <input type="radio" class="btn-check" name="locType" id="locBase" value="base">
+            <label class="btn btn-outline-secondary w-50" for="locBase">
+              <i class="bi bi-shop me-1"></i><span data-i18n="cashier_store">Магазин</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Сумма чека -->
+        <div class="mb-3">
+          <label class="form-label fw-semibold small text-muted text-uppercase" style="letter-spacing:.04em" id="cashierAmountLabel">
+            Сумма чека (₽)
+          </label>
+          <input type="number" id="txAmount" class="form-control big-input"
+                 step="0.01" min="0" placeholder="0.00"
+                 oninput="onAmountInput()">
+        </div>
+
+        <!-- К оплате (появляется когда выбраны бонусы) -->
+        <div id="payTotalBlock" style="display:none" class="mb-3 rounded-3 p-2">
+          <!-- Когда сумма не введена -->
+          <div id="ptNoAmount" class="alert alert-warning py-2 mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>Бонусы выбраны — введите сумму чека</span>
+          </div>
+          <!-- Когда сумма введена -->
+          <div id="ptCalc" class="border border-success-subtle bg-success-subtle rounded-3 p-2" style="display:none">
+            <div class="d-flex justify-content-between align-items-center text-muted small">
+              <span data-i18n="label_receipt_amount">Сумма чека</span>
+              <span id="ptAmount">0.00 ₽</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center text-warning-emphasis small">
+              <span><i class="bi bi-dash-circle me-1"></i>Бонусы:</span>
+              <span id="ptRedeem">0.00</span>
+            </div>
+            <hr class="my-1">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-bold text-success" data-i18n="cashier_sum_to_pay">К оплате</span>
+              <span id="ptFinal" class="fw-bold text-success" style="font-size:1.3rem">0.00 ₽</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Топливный блок (только для АЗС) -->
+        <div id="fuelBlock" class="fuel-block mb-3">
+          <div class="fw-semibold small mb-2 text-primary">
+            <i class="bi bi-fuel-pump me-1"></i><span data-i18n="label_fuel_liters">Литры топлива</span>
+          </div>
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <label class="form-label small text-muted mb-0" data-i18n="label_fuel_type">Быстрый выбор топлива</label>
+            <span class="text-muted small">1 нажатие</span>
+          </div>
+          <div id="fuelQuickBtns" class="fuel-quick-grid mb-3"></div>
+          <div class="mb-2">
+            <div class="fuel-select-fallback">Полный список</div>
+            <select id="fuelTypeSelect" class="form-select form-select-sm" onchange="onFuelTypeChange()">
+              <option value="">— выберите топливо —</option>
+            </select>
+          </div>
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label small text-muted mb-1" id="cashierFuelPriceLabel">Цена 1 литра (₽)</label>
+              <input type="number" id="fuelPrice" class="form-control form-control-sm"
+                     step="0.01" min="0" placeholder="0.00" oninput="onFuelPriceInput()">
+            </div>
+            <div class="col-6">
+              <label class="form-label small text-muted mb-1" data-i18n="liters">Литров</label>
+              <input type="number" id="fuelLiters" class="form-control form-control-sm fw-bold"
+                     step="0.001" min="0" placeholder="—" oninput="onLitersInput()">
+            </div>
+          </div>
+        </div>
+
+        <input type="hidden" id="txCheckId">
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       КЛИЕНТ — правая колонка
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="col-xl-7 col-lg-7 col-md-7">
+    <div class="panel-card">
+      <div class="panel-head bg-light text-dark border-bottom">
+        <i class="bi bi-person-circle me-2 text-primary"></i><span data-i18n="client_title">Клиент</span>
+      </div>
+      <div class="panel-body">
+
+        <!-- Строка поиска -->
+        <div class="client-search-wrap mb-3" id="clientSearchWrap">
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+               <input type="text" id="phoneInput" class="form-control form-control-lg"
+                 placeholder="Телефон, имя или последние 4 цифры" autocomplete="off"
+                   onkeydown="handleClientSearchKeydown(event)">
+            <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#qrModal" title="Сканировать QR-код">
+              <i class="bi bi-qr-code-scan"></i>
+            </button>
+            <button class="btn btn-primary px-4 fw-semibold" id="btnFind" onclick="findClient()">
+              <i class="bi bi-search me-1"></i><span data-i18n="button_find">Найти</span>
+            </button>
+          </div>
+          <div id="clientSearchSuggestions" class="client-search-suggestions d-none"></div>
+        </div>
+
+        <!-- === СОСТОЯНИЕ: начальное === -->
+        <div id="stateEmpty">
+          <div class="text-center py-4 text-muted">
+            <i class="bi bi-person-badge" style="font-size:3rem;opacity:.25;display:block;margin-bottom:.5rem"></i>
+            <div class="fw-semibold" id="cashierClientSearchPrompt">Введите имя, телефон или последние 4 цифры</div>
+            <div class="small mt-1" data-i18n="cashier_without_client">Без клиента</div>
+          </div>
+          <button class="btn btn-outline-secondary w-100" onclick="skipClient()">
+            <i class="bi bi-skip-forward me-1"></i><span data-i18n="button_continue_without_client">Продолжить без клиента</span>
+          </button>
+        </div>
+
+        <!-- === СОСТОЯНИЕ: найден === -->
+        <div id="stateFound" class="d-none">
+          <div class="client-found-block mb-3 d-flex align-items-center gap-3">
+            <div class="client-avatar" id="clientAvatar">ИМ</div>
+            <div class="flex-grow-1">
+              <div class="fw-bold fs-5 lh-1 mb-1" id="clientName">—</div>
+              <div class="text-muted small" id="clientPhone2">—</div>
+            </div>
+            <div class="text-end">
+              <div class="fw-black text-success" style="font-size:2rem;line-height:1" id="clientBalance">0</div>
+              <div class="small text-success">бонусов</div>
+            </div>
+          </div>
+
+          <div id="clientQrInlineCard" class="rounded-4 border bg-light p-3 mb-3">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+              <div>
+                <div class="fw-semibold"><i class="bi bi-qr-code me-1"></i>QR клиента</div>
+                <div class="small text-muted">Клиент может сразу сфотографировать этот код</div>
+              </div>
+              <button type="button" class="btn btn-primary btn-sm" id="btnShowClientQr" onclick="showClientQrModal()" disabled>
+                <i class="bi bi-arrows-fullscreen me-1"></i>Увеличить
+              </button>
+            </div>
+            <div class="text-center">
+              <img id="clientQrInlineImage" src="" alt="QR клиента" class="img-fluid rounded-3 border bg-white p-2" style="display:none;max-width:150px;cursor:pointer;" onclick="showClientQrModal()">
+              <div id="clientQrInlineEmpty" class="text-muted small py-3">QR-код загружается автоматически после выбора клиента</div>
+            </div>
+          </div>
+
+          <div id="clientMobileCodeCard" class="rounded-4 border bg-light p-3 mb-3">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+              <div>
+                <div class="fw-semibold"><i class="bi bi-key me-1"></i>Одноразовый код для приложения</div>
+                <div class="small text-muted" id="clientMobileCodeStatus">Если клиент потерял первый код, выдайте новый здесь</div>
+              </div>
+              <button type="button" class="btn btn-warning btn-sm" id="btnIssueMobileCode" onclick="issueCurrentClientMobileCode()">
+                <i class="bi bi-key-fill me-1"></i>Выдать код
+              </button>
+            </div>
+            <div id="clientMobileCodeValueWrap" class="rounded-3 bg-white border px-3 py-2 d-none">
+              <div class="small text-muted">Код для клиента</div>
+              <div id="clientMobileCodeValue" class="fw-black text-dark" style="font-size:2rem;line-height:1.1;letter-spacing:.35rem;">----</div>
+              <div id="clientMobileCodeMeta" class="small text-muted mt-1">Код появится здесь сразу после выдачи</div>
+            </div>
+          </div>
+
+          <!-- Блок списания -->
+          <div class="redeem-block mb-3">
+            <div class="fw-semibold small mb-2">
+              <i class="bi bi-gift me-1"></i>Использовать бонусы при оплате
+            </div>
+            <!-- Кнопки выбора режима -->
+            <div class="btn-group w-100 mb-2" role="group" id="redeemModeGroup">
+              <button type="button" class="btn btn-sm btn-outline-secondary active" id="redeemModeNone"
+                      onclick="setRedeemMode('none')">Не использовать</button>
+              <button type="button" class="btn btn-sm btn-outline-primary" id="redeemModeCustom"
+                      onclick="setRedeemMode('custom')">Своя сумма</button>
+              <button type="button" class="btn btn-sm btn-outline-warning" id="redeemModeMax"
+                      onclick="setRedeemMode('max')">Максимум</button>
+            </div>
+            <!-- Поле ввода (только в режиме "своя сумма") -->
+            <div id="redeemCustomBlock" style="display:none" class="mb-1">
+              <input type="number" id="redeemInput" class="form-control form-control-sm"
+                     step="0.01" min="0" placeholder="Введите сумму бонусов"
+                     oninput="updateRedeemHint()">
+            </div>
+            <div class="small text-muted mt-1" id="redeemHint">Баланс: загрузка...</div>
+          </div>
+
+          <div class="d-grid gap-2">
+            <button class="btn btn-outline-secondary btn-sm w-100" onclick="clearClient()">
+              <i class="bi bi-person-x me-1"></i>Другой клиент
+            </button>
+          </div>
+        </div>
+
+        <!-- === СОСТОЯНИЕ: не найден === -->
+        <div id="stateNotFound" class="d-none">
+          <div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-3">
+            <i class="bi bi-person-question-circle fs-4"></i>
+            <div>Клиент <b id="notFoundPhone"></b> не зарегистрирован</div>
+          </div>
+
+          <div class="rounded-3 p-3 mb-3" style="background:#f8f9fa;border:1.5px dashed #dee2e6">
+            <div class="fw-semibold small mb-2 text-primary">
+              <i class="bi bi-person-plus me-1"></i>Быстрая регистрация
+              <span data-i18n="button_quick_registration">Быстрая регистрация</span>
+            </div>
+            <input type="text" id="regName" class="form-control mb-2" placeholder="Имя клиента (необязательно)">
+            <button class="btn btn-primary w-100 fw-semibold" id="btnRegister" onclick="registerClient()">
+              <i class="bi bi-person-check me-1"></i><span data-i18n="button_register_and_continue">Зарегистрировать и продолжить</span>
+            </button>
+          </div>
+
+          <button class="btn btn-outline-secondary w-100" onclick="skipClient()">
+            <i class="bi bi-skip-forward me-1"></i><span data-i18n="button_continue_without_client">Продолжить без клиента</span>
+          </button>
+        </div>
+
+        <!-- === СОСТОЯНИЕ: пропущен === -->
+        <div id="stateSkipped" class="d-none">
+          <div class="alert alert-secondary py-2 d-flex align-items-center gap-2 mb-0">
+            <i class="bi bi-person-dash"></i>
+            <div data-i18n="cashier_no_client_bonus">Чек без клиента — бонусы не начисляются</div>
+            <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="clearClient()" data-i18n="button_other_client">Другой клиент</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div><!-- /row -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     СВОДКА + ПРОВЕСТИ
+═══════════════════════════════════════════════════════════ -->
+<div class="panel-card mt-3 p-3">
+  <!-- Сводка -->
+  <div class="d-flex flex-wrap gap-2 mb-3" id="summaryRow" style="min-height:36px">
+    <span class="summary-chip text-muted"><i class="bi bi-info-circle"></i> <span data-i18n="cashier_enter_receipt_amount">Введите сумму для оформления чека</span></span>
+  </div>
+
+  <!-- Кнопка СПИСАТЬ -->
+  <button class="btn btn-success btn-proceed w-100" id="btnProceed" onclick="proceed()" disabled>
+    <i class="bi bi-check-circle-fill me-2"></i><span data-i18n="button_process_receipt">Списать чек</span>
+  </button>
+</div>
+
+<!-- История за смену -->
+<div class="panel-card mt-3">
+  <div class="panel-body">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <div class="fw-semibold small text-uppercase text-muted" style="letter-spacing:.04em">
+        <i class="bi bi-clock-history me-1"></i><span data-i18n="cashier_shift_operations">Операции за смену</span>
+      </div>
+      <span id="opCount" class="badge bg-secondary rounded-pill">0</span>
+    </div>
+    <div id="opList">
+      <div class="text-muted small text-center py-3" data-i18n="cashier_no_operations">Операций пока нет</div>
+    </div>
+    <div id="opPagination" class="d-none mt-3 d-flex align-items-center justify-content-between gap-2 flex-wrap"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+'use strict';
+
+const tr = (key, fallback = '') => appI18n.t(key, fallback);
+const money = (value, digits = 2) => appI18n.formatMoney(value, digits);
+const num = (value, digits = 2) => appI18n.formatNumber(value, digits);
+const pricePerLiterLabel = (value, digits = 2) => appI18n.formatPricePerLiter(value, digits);
+
+function refreshCashierStaticLabels() {
+  const amountLabel = document.getElementById('cashierAmountLabel');
+  if (amountLabel) amountLabel.textContent = `${tr('label_receipt_amount')} (${appI18n.getCurrencySymbol()})`;
+  const priceLabel = document.getElementById('cashierFuelPriceLabel');
+  if (priceLabel) priceLabel.textContent = `${tr('label_price_per_liter')} (${appI18n.getCurrencySymbol()})`;
+  const phoneInput = document.getElementById('phoneInput');
+  if (phoneInput) phoneInput.placeholder = tr('cashier_client_search_placeholder', 'Телефон, имя или последние 4 цифры');
+  const searchPrompt = document.getElementById('cashierClientSearchPrompt');
+  if (searchPrompt) searchPrompt.textContent = tr('cashier_client_search_prompt', 'Введите имя, телефон или последние 4 цифры');
+}
+
+function getClientInitials(data) {
+  return (data.name || data.phone || '?').split(' ').slice(0,2)
+    .map(word => word[0]).join('').toUpperCase().slice(0,2) || '??';
+}
+
+// ── Кассир: авторизация ───────────────────────────────────────────────────
+const LS_CASHIER_TOKEN = 'azs_cashier_token';
+const LS_CASHIER_OPS_PREFIX = 'azs_cashier_shift_ops';
+const SS_CASHIER_FLASH_TOAST = 'azs_cashier_flash_toast';
+const OPS_PAGE_SIZE = 8;
+let cashierToken = localStorage.getItem(LS_CASHIER_TOKEN) || null;
+let currentCashier = null; // {id, name, username, azs_id}
+const SS_CASHIER_REFOCUS_SEARCH = 'azs_cashier_refocus_search';
+let cashierShiftState = { has_active_shift: false, shift: null, summary: null };
+let clientSearchSuggestions = [];
+let clientSearchSuggestionIndex = -1;
+let clientSearchSuggestTimer = null;
+let clientSearchSuggestRequestId = 0;
+
+function hasActiveCashierShift() {
+  return !!(cashierShiftState?.has_active_shift && cashierShiftState?.shift);
+}
+
+function cashierOpsStorageKey() {
+  const cashierId = currentCashier?.id || currentCashier?.username;
+  const shiftId = cashierShiftState?.shift?.id;
+  if (!cashierId || !shiftId) return null;
+  return `${LS_CASHIER_OPS_PREFIX}:${cashierId}:${shiftId}`;
+}
+
+function formatCashierShiftDateTime(value) {
+  if (!value) return '';
+  return appI18n.formatDateTime(value, {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatCashierShiftDuration(shift) {
+  if (!shift?.started_at) return '0 мин';
+  const startedAt = new Date(shift.started_at);
+  if (Number.isNaN(startedAt.getTime())) return '0 мин';
+  const endedAt = shift.ended_at ? new Date(shift.ended_at) : new Date();
+  if (Number.isNaN(endedAt.getTime())) return '0 мин';
+  const totalMinutes = Math.max(0, Math.round((endedAt.getTime() - startedAt.getTime()) / 60000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return hours > 0 ? `${hours} ч ${minutes} мин` : `${minutes} мин`;
+}
+
+function renderCashierShiftSummary(summary = null) {
+  const data = summary || {};
+  const salesCount = Number(data.fuel_sales_count || 0);
+  const accruedBonus = Number(data.accrued_bonus_total || 0);
+  const redeemedBonus = Number(data.redeemed_bonus_total || 0);
+  const fuelAmount = Number(data.fuel_sales_total || 0);
+  const fuelLiters = Number(data.fuel_liters_total || 0);
+  const salesEl = document.getElementById('shiftSummarySalesCount');
+  if (salesEl) salesEl.textContent = `${tr('sales', 'Продаж')}: ${salesCount.toLocaleString(appI18n.getCurrentLocale())}`;
+  const accruedEl = document.getElementById('shiftSummaryAccrued');
+  if (accruedEl) accruedEl.textContent = `${tr('cashier_shift_bonus_accrued', 'Начислено')}: ${num(accruedBonus)}`;
+  const redeemedEl = document.getElementById('shiftSummaryRedeemed');
+  if (redeemedEl) redeemedEl.textContent = `${tr('cashier_shift_bonus_redeemed', 'Списано')}: ${num(redeemedBonus)}`;
+  const fuelLitersEl = document.getElementById('shiftSummaryFuelLiters');
+  if (fuelLitersEl) fuelLitersEl.textContent = `${tr('cashier_shift_fuel_liters', 'Литров')}: ${num(fuelLiters, 3)}`;
+  const fuelAmountEl = document.getElementById('shiftSummaryFuelAmount');
+  if (fuelAmountEl) fuelAmountEl.textContent = `${tr('amount', 'Сумма')}: ${money(fuelAmount)}`;
+}
+
+function setCashierShiftUI() {
+  const panel = document.getElementById('cashierShiftPanel');
+  if (!panel) return;
+  if (!currentCashier) {
+    panel.classList.add('d-none');
+    return;
+  }
+
+  panel.classList.remove('d-none');
+  const badge = document.getElementById('cashierShiftBadge');
+  const started = document.getElementById('cashierShiftStarted');
+  const duration = document.getElementById('cashierShiftDuration');
+  const hint = document.getElementById('cashierShiftHint');
+  const openBtn = document.getElementById('btnShiftOpen');
+  const closeBtn = document.getElementById('btnShiftClose');
+  const active = hasActiveCashierShift();
+
+  if (badge) {
+    badge.className = active
+      ? 'badge rounded-pill bg-success-subtle text-success border'
+      : 'badge rounded-pill bg-secondary-subtle text-secondary border';
+    badge.textContent = active
+      ? tr('cashier_shift_status_open', 'Смена открыта')
+      : tr('cashier_shift_status_closed', 'Смена закрыта');
+  }
+  if (openBtn) openBtn.disabled = active;
+  if (closeBtn) closeBtn.disabled = !active;
+
+  if (active) {
+    if (started) started.textContent = `${tr('cashier_shift_started_at', 'Открыта')}: ${formatCashierShiftDateTime(cashierShiftState.shift.started_at)}`;
+    if (duration) duration.textContent = `${tr('cashier_shift_duration', 'Длительность')}: ${formatCashierShiftDuration(cashierShiftState.shift)}`;
+    if (hint) hint.textContent = tr('cashier_shift_open_hint', 'Смена активна. Проведение чеков доступно.');
+  } else if (cashierShiftState?.shift?.ended_at) {
+    if (started) started.textContent = `${tr('cashier_shift_last_closed', 'Последняя смена закрыта')}: ${formatCashierShiftDateTime(cashierShiftState.shift.ended_at)}`;
+    if (duration) duration.textContent = `${tr('cashier_shift_duration', 'Длительность')}: ${formatCashierShiftDuration(cashierShiftState.shift)}`;
+    if (hint) hint.textContent = tr('cashier_shift_last_summary', 'Показаны итоги последней закрытой смены.');
+  } else {
+    if (started) started.textContent = '';
+    if (duration) duration.textContent = '';
+    if (hint) hint.textContent = tr('cashier_shift_open_first', 'Откройте смену, чтобы проводить чеки и регистрировать продажи.');
+  }
+
+  renderCashierShiftSummary(cashierShiftState.summary);
+}
+
+function normalizeSessionOp(op) {
+  if (!op || typeof op !== 'object') return null;
+  return {
+    amount: Number(op.amount || 0),
+    liters: op.liters == null ? null : Number(op.liters),
+    checkId: String(op.checkId || '').trim(),
+    location: op.location === 'base' ? 'base' : 'fuel',
+    redeemAmt: Number(op.redeemAmt || 0),
+    accruedBonus: op.accruedBonus == null ? null : Number(op.accruedBonus),
+    clientName: op.clientName ? String(op.clientName) : null,
+    canCancel: op.canCancel !== false,
+    cancelled: !!op.cancelled,
+    time: op.time ? String(op.time) : '',
+  };
+}
+
+let sessionOps = [];
+let sessionOpsPage = 1;
+let sessionOpsStorageKey = null;
+
+function persistSessionOps() {
+  const key = cashierOpsStorageKey() || sessionOpsStorageKey;
+  if (!key) return;
+  sessionOpsStorageKey = key;
+  localStorage.setItem(key, JSON.stringify(sessionOps.slice(0, 200)));
+}
+
+function syncSessionOpsStorage(forceReload = false) {
+  const nextKey = cashierOpsStorageKey();
+  if (!forceReload && nextKey === sessionOpsStorageKey) {
+    renderOps();
+    return;
+  }
+  sessionOpsStorageKey = nextKey;
+  sessionOpsPage = 1;
+  if (!nextKey) {
+    sessionOps = [];
+    renderOps();
+    return;
+  }
+  try {
+    const raw = localStorage.getItem(nextKey);
+    const parsed = raw ? JSON.parse(raw) : [];
+    sessionOps = Array.isArray(parsed)
+      ? parsed.map(normalizeSessionOp).filter(Boolean).filter(op => op.checkId)
+      : [];
+  } catch {
+    sessionOps = [];
+  }
+  renderOps();
+}
+
+function setSessionOpsPage(page) {
+  const totalPages = Math.max(1, Math.ceil(sessionOps.length / OPS_PAGE_SIZE));
+  sessionOpsPage = Math.min(Math.max(1, page), totalPages);
+  renderOps();
+}
+
+function consumeCashierFlashToast() {
+  try {
+    const raw = sessionStorage.getItem(SS_CASHIER_FLASH_TOAST);
+    if (!raw) return;
+    sessionStorage.removeItem(SS_CASHIER_FLASH_TOAST);
+    const data = JSON.parse(raw);
+    if (data?.message) showToast(data.message, data.type || 'success');
+  } catch {}
+}
+
+function consumeCashierSearchRefocus() {
+  try {
+    const shouldRefocus = sessionStorage.getItem(SS_CASHIER_REFOCUS_SEARCH) === '1';
+    if (!shouldRefocus) return;
+    sessionStorage.removeItem(SS_CASHIER_REFOCUS_SEARCH);
+  } catch {
+    return;
+  }
+
+  if (!currentCashier) return;
+
+  const phoneInput = document.getElementById('phoneInput');
+  if (!phoneInput) return;
+  requestAnimationFrame(() => {
+    phoneInput.focus();
+    phoneInput.select?.();
+  });
+}
+
+// ── Состояние ──────────────────────────────────────────────────────────────
+let currentClient = null;  // {id, phone, name, photo_data_url, bonus_balance, total_spent}
+let clientMode = 'empty';  // 'empty' | 'found' | 'notfound' | 'skipped'
+let fuelsData = [];        // [{id, code, name, price_per_liter, is_active}]
+const LS_LAST_FUEL_ID = 'azs_last_fuel_id';
+
+// ── Часы ───────────────────────────────────────────────────────────────────
+(function clockTick() {
+  const now = new Date();
+  document.getElementById('clockBadge').textContent =
+    appI18n.formatDateTime(now, {day:'2-digit', month:'2-digit', year:'numeric',
+      hour:'2-digit', minute:'2-digit'});
+  if (hasActiveCashierShift()) setCashierShiftUI();
+  setTimeout(clockTick, 30000);
+})();
+
+// ── Инициализация ──────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  refreshCashierStaticLabels();
+  syncSessionOpsStorage(true);
+  await initCashierAuth();
+  syncSessionOpsStorage(true);
+  regenerateCheck();
+  const phoneInput = document.getElementById('phoneInput');
+  if (phoneInput) {
+    phoneInput.addEventListener('input', () => {
+      if (currentClient && phoneInput.value.trim() !== (currentClient.phone || '')) {
+        currentClient = null;
+        clientMode = 'empty';
+        showState('stateEmpty');
+        updateSummary();
+        updateProceedBtn();
+      }
+      scheduleClientSearchSuggestions();
+    });
+    phoneInput.addEventListener('focus', () => {
+      if ((phoneInput.value || '').trim()) scheduleClientSearchSuggestions();
+    });
+  }
+  const suggestionBox = document.getElementById('clientSearchSuggestions');
+  if (suggestionBox) {
+    suggestionBox.addEventListener('click', (event) => {
+      const option = event.target.closest('.client-search-suggestion');
+      if (!option) return;
+      const index = Number(option.dataset.index);
+      applyClientSuggestion(clientSearchSuggestions[index]);
+    });
+  }
+  document.addEventListener('click', (event) => {
+    const wrap = document.getElementById('clientSearchWrap');
+    if (wrap && !wrap.contains(event.target)) hideClientSearchSuggestions();
+  });
+  const qrInput = document.getElementById('qrInput');
+  if (qrInput) {
+    qrInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        applyQr();
+      }
+    });
+  }
+  const qrModal = document.getElementById('qrModal');
+  if (qrModal && qrInput) {
+    qrModal.addEventListener('shown.bs.modal', () => {
+      qrInput.focus();
+      qrInput.select();
+    });
+  }
+  document.querySelectorAll('input[name="locType"]').forEach(r =>
+    r.addEventListener('change', onLocChange));
+  onLocChange();
+  loadFuelPrices();
+  consumeCashierFlashToast();
+  consumeCashierSearchRefocus();
+});
+window.addEventListener('app:locale-changed', () => {
+  refreshCashierStaticLabels();
+  renderFuelQuickButtons(fuelsData.filter(f => f.is_active));
+  updateRedeemHint();
+  updatePayTotal();
+  updateSummary();
+  syncSessionOpsStorage();
+  setCashierShiftUI();
+});
+
+window.addEventListener('azs:offline-queue-flushed', () => {
+  loadCashierShiftStatus(true);
+  loadFuelPrices();
+});
+
+// ── Загрузка цен на топливо ────────────────────────────────────────────────
+async function loadFuelPrices() {
+  try {
+    const r = await fetch('/api/fuel-prices', {
+      offlineCacheKey: 'cashier_fuel_prices',
+      offlineCacheScope: cashierPreferenceScope(),
+    });
+    if (!r.ok) return;
+    fuelsData = await r.json();
+    const sel = document.getElementById('fuelTypeSelect');
+    sel.innerHTML = '<option value="">— выберите топливо —</option>';
+
+    const active = fuelsData.filter(f => f.is_active);
+    active.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f.id;
+      opt.textContent = `${f.name} — ${pricePerLiterLabel(f.price_per_liter)}`;
+      opt.dataset.price = f.price_per_liter;
+      opt.dataset.code = f.code;
+      opt.dataset.name = f.name;
+      sel.appendChild(opt);
+    });
+
+    renderFuelQuickButtons(active);
+
+    // Автовыбор: последний использованный или первый активный
+    const lastId = localStorage.getItem(LS_LAST_FUEL_ID);
+    if (lastId && active.some(f => String(f.id) === String(lastId))) {
+      selectFuelById(lastId);
+    } else if (active.length && !sel.value) {
+      selectFuelById(active[0].id);
+    }
+  } catch {}
+}
+
+function renderFuelQuickButtons(activeFuels) {
+  const wrap = document.getElementById('fuelQuickBtns');
+  if (!wrap) return;
+  if (!activeFuels || !activeFuels.length) {
+    wrap.innerHTML = '';
+    return;
+  }
+  const selectedId = document.getElementById('fuelTypeSelect')?.value || '';
+  wrap.innerHTML = activeFuels.map(f => {
+    const meta = fuelVisualMeta(f);
+    const isActive = String(selectedId) === String(f.id);
+    const price = pricePerLiterLabel(f.price_per_liter || 0);
+    const code = fuelPrimaryLabel(f);
+    const subtitle = fuelSecondaryLabel(f);
+    return `<button type="button" class="fuel-quick-card ${isActive ? 'active' : ''}"
+              data-fuel-id="${f.id}"
+              style="--fuel-bg:${meta.bg};--fuel-border:${meta.border};--fuel-accent:${meta.accent};"
+              onclick="selectFuelById('${f.id}')">
+              <div class="fuel-quick-top">
+                <span class="fuel-quick-icon"><i class="bi ${meta.icon}"></i></span>
+                <span class="fuel-quick-price">${price}</span>
+              </div>
+              <div>
+                <div class="fuel-quick-title">${code}</div>
+                <div class="fuel-quick-subtitle">${subtitle}</div>
+              </div>
+            </button>`;
+  }).join('');
+}
+
+function fuelPrimaryLabel(fuel) {
+  const code = String(fuel?.code || '').trim();
+  if (code) return code.toUpperCase();
+
+  const name = String(fuel?.name || '').trim();
+  const normalized = name.toUpperCase();
+  const match = normalized.match(/АИ-?\d+|А-?\d+|ДТ|DIESEL|88|80|92|95|98/);
+  return match ? match[0] : (name || 'Топливо');
+}
+
+function fuelSecondaryLabel(fuel) {
+  const name = String(fuel?.name || '').trim();
+  if (!name) return 'Быстрый выбор';
+  return name;
+}
+
+function fuelVisualMeta(fuel) {
+  const text = `${fuel?.code || ''} ${fuel?.name || ''}`.toUpperCase();
+  if (text.includes('95') || text.includes('98')) {
+    return { icon: 'bi-lightning-charge-fill', bg: '#fff7db', border: '#f7c948', accent: '#a16207' };
+  }
+  if (text.includes('92')) {
+    return { icon: 'bi-droplet-fill', bg: '#dff2ff', border: '#7dd3fc', accent: '#075985' };
+  }
+  if (text.includes('88') || text.includes('80')) {
+    return { icon: 'bi-circle-fill', bg: '#ecfccb', border: '#bef264', accent: '#3f6212' };
+  }
+  if (text.includes('ДТ') || text.includes('ДИЗ') || text.includes('DIESEL')) {
+    return { icon: 'bi-truck', bg: '#ede9fe', border: '#c4b5fd', accent: '#5b21b6' };
+  }
+  return { icon: 'bi-fuel-pump-fill', bg: '#e2e8f0', border: '#cbd5e1', accent: '#334155' };
+}
+
+function syncFuelQuickButtonsActive(selectedId) {
+  document.querySelectorAll('#fuelQuickBtns [data-fuel-id]').forEach((node) => {
+    node.classList.toggle('active', String(node.dataset.fuelId) === String(selectedId || ''));
+  });
+}
+
+function selectFuelById(id) {
+  const sel = document.getElementById('fuelTypeSelect');
+  if (!sel) return;
+  sel.value = String(id);
+  onFuelTypeChange();
+}
+
+// ── Выбор вида топлива ─────────────────────────────────────────────────────
+function onFuelTypeChange() {
+  const sel = document.getElementById('fuelTypeSelect');
+  const opt = sel.options[sel.selectedIndex];
+  if (opt && opt.dataset.price) {
+    document.getElementById('fuelPrice').value = parseFloat(opt.dataset.price).toFixed(2);
+    localStorage.setItem(LS_LAST_FUEL_ID, String(opt.value));
+    syncFuelQuickButtonsActive(opt.value);
+
+    // Пересчёт зависит от того, что вводили последним
+    const litersVal = parseFloat(document.getElementById('fuelLiters').value) || 0;
+    const amountVal = parseFloat(document.getElementById('txAmount').value) || 0;
+    if (amountVal > 0) {
+      _lastEditedFuel = 'amount';
+      calcLiters();
+    } else if (_lastEditedFuel === 'liters' && litersVal > 0) {
+      calcAmount();
+    }
+
+    // После выбора топлива удобно сразу вводить литры
+    document.getElementById('fuelLiters')?.focus();
+    updateSummary();
+  } else {
+    document.getElementById('fuelPrice').value = '';
+    document.getElementById('fuelLiters').value = '';
+    syncFuelQuickButtonsActive('');
+    updateSummary();
+  }
+}
+
+// ── Смена типа локации ─────────────────────────────────────────────────────
+function onLocChange() {
+  const isFuel = document.getElementById('locFuel').checked;
+  document.getElementById('fuelBlock').style.display = isFuel ? '' : 'none';
+  updateSummary();
+  updateProceedBtn();
+}
+
+// ── Калькулятор топлива ────────────────────────────────────────────────────
+let _lastEditedFuel = null; // 'amount' | 'liters'
+
+function syncFuelCalculatorState() {
+  if (redeemMode === 'max') fillMaxRedeem(); else updateRedeemHint();
+  updateSummary();
+  updateProceedBtn();
+}
+
+function onAmountInput() {
+  _lastEditedFuel = 'amount';
+  calcLiters();
+  syncFuelCalculatorState();
+}
+
+function onFuelPriceInput() {
+  const liters = parseFloat(document.getElementById('fuelLiters').value) || 0;
+  const amount = parseFloat(document.getElementById('txAmount').value) || 0;
+
+  if (_lastEditedFuel === 'liters' && liters > 0) {
+    calcAmount();
+  } else if (amount > 0) {
+    calcLiters();
+  }
+
+  syncFuelCalculatorState();
+}
+
+function onLitersInput() {
+  _lastEditedFuel = 'liters';
+  calcAmount();
+  syncFuelCalculatorState();
+}
+
+function calcLiters() {
+  const price = parseFloat(document.getElementById('fuelPrice').value) || 0;
+  const amount = parseFloat(document.getElementById('txAmount').value) || 0;
+  if (price > 0 && amount > 0) {
+    document.getElementById('fuelLiters').value = (amount / price).toFixed(3);
+  }
+}
+
+function calcAmount() {
+  const price = parseFloat(document.getElementById('fuelPrice').value) || 0;
+  const liters = parseFloat(document.getElementById('fuelLiters').value) || 0;
+  if (price > 0 && liters > 0) {
+    const roundedAmount = Math.round(((price * liters) + Number.EPSILON) * 100) / 100;
+    document.getElementById('txAmount').value = roundedAmount.toFixed(2);
+  }
+}
+
+// ── Номер чека ─────────────────────────────────────────────────────────────
+function regenerateCheck() {
+  document.getElementById('txCheckId').value = 'CHK-' + Date.now().toString(36).toUpperCase();
+}
+
+// Быстрое проведение по Enter (когда всё готово)
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const id = e.target?.id || '';
+  if (['txAmount','fuelLiters','fuelPrice','redeemInput'].includes(id)) {
+    const btn = document.getElementById('btnProceed');
+    if (btn && !btn.disabled) {
+      e.preventDefault();
+      proceed();
+    }
+  }
+});
+
+// ── Поиск клиента ──────────────────────────────────────────────────────────
+async function findClient(searchValue = null, source = 'phone') {
+  const query = (searchValue ?? document.getElementById('phoneInput').value).trim();
+  if (!query) return;
+  hideClientSearchSuggestions();
+
+  const btn = document.getElementById('btnFind');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+  try {
+    const payload = source === 'qr' ? { qr_data: query } : { phone: query };
+    const r = await apiPost('/api/cash/client-info', payload);
+    if (r.ok) {
+      const data = await r.json();
+      document.getElementById('phoneInput').value = data.phone || query;
+      setClientFound(data);
+    } else {
+      let detail = '';
+      try {
+        const err = await r.json();
+        detail = err?.detail || '';
+      } catch {}
+
+      const digits = Array.from(query).filter(ch => /\d/.test(ch)).length;
+      const isFullPhoneSearch = source === 'phone' && digits >= 9;
+
+      if (r.status === 404 && isFullPhoneSearch) {
+        setClientNotFound(query);
+      } else {
+        currentClient = null;
+        clientMode = 'empty';
+        showState('stateEmpty');
+        updateSummary();
+        updateProceedBtn();
+        showToast(
+          detail || (r.status === 409
+            ? tr('cashier_client_search_multiple', 'Найдено несколько клиентов. Уточните имя или последние 4 цифры.')
+            : tr('cashier_client_not_found', 'Клиент не найден')),
+          r.status === 409 ? 'warning' : 'danger'
+        );
+      }
+    }
+  } catch {
+    showToast(tr('cashier_connection_error'), 'danger');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<i class="bi bi-search me-1"></i>${tr('button_find')}`;
+  }
+}
+
+function normalizePhoneLikeScannerInput(value) {
+  const rawValue = String(value || '').trim();
+  if (!rawValue) return '';
+
+  const digits = Array.from(rawValue).filter((char) => /\d/.test(char)).join('');
+  if (!digits) return rawValue;
+
+  if (digits.length === 12 && digits.startsWith('992')) return `+${digits}`;
+  if (digits.length === 11 && (digits.startsWith('7') || digits.startsWith('8'))) return `+7${digits.slice(1)}`;
+  if (digits.length === 10) return `+7${digits}`;
+  if (digits.length === 9) return `+992${digits}`;
+
+  return rawValue;
+}
+
+function applyQr() {
+  const qrInput = document.getElementById('qrInput');
+  const rawValue = qrInput?.value?.trim() || '';
+  if (!rawValue) {
+    qrInput?.focus();
+    return;
+  }
+
+  const normalizedValue = normalizePhoneLikeScannerInput(rawValue);
+  if (qrInput) qrInput.value = normalizedValue;
+
+  const modalEl = document.getElementById('qrModal');
+  if (modalEl) {
+    bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+  }
+
+  const source = normalizedValue.startsWith('+') ? 'phone' : 'qr';
+  findClient(normalizedValue, source);
+}
+
+function renderCashierClientAvatar(data) {
+  const avatar = document.getElementById('clientAvatar');
+  const initials = getClientInitials(data);
+
+  avatar.textContent = initials;
+  if (data.photo_data_url) {
+    avatar.style.backgroundImage = `url("${data.photo_data_url}")`;
+    avatar.style.backgroundColor = '#dbe7ff';
+    avatar.style.color = 'transparent';
+  } else {
+    avatar.style.backgroundImage = 'linear-gradient(135deg,#0d6efd,#0856d6)';
+    avatar.style.backgroundColor = '';
+    avatar.style.color = '#fff';
+  }
+}
+
+function setClientFound(data, options = {}) {
+  const { openQr = false } = options;
+  currentClient = data;
+  clientMode = 'found';
+  hideClientSearchSuggestions();
+
+  renderCashierClientAvatar(data);
+  document.getElementById('clientName').textContent = data.name || 'Без имени';
+  document.getElementById('clientPhone2').textContent = data.phone;
+  document.getElementById('clientBalance').textContent =
+    parseFloat(data.bonus_balance || 0).toLocaleString(appI18n.getCurrentLocale(), {maximumFractionDigits:2});
+  updateClientQrPreview(data);
+  resetClientMobileCodePanel(data);
+  if (!data?.qr_base64 && data?.phone) {
+    ensureClientQrData();
+  }
+
+  // Сбросим поле списания
+  document.getElementById('redeemInput').value = '';
+  setRedeemMode('none');
+  updateRedeemHint();
+
+  showState('stateFound');
+  updateSummary();
+  updateProceedBtn();
+
+  if (openQr && data?.qr_base64) {
+    setTimeout(() => showClientQrModal(), 0);
+  }
+}
+
+function setClientNotFound(phone) {
+  currentClient = null;
+  clientMode = 'notfound';
+  hideClientSearchSuggestions();
+  resetClientQrPreview();
+  resetClientMobileCodePanel();
+  document.getElementById('notFoundPhone').textContent = phone;
+  document.getElementById('regName').value = '';
+  showState('stateNotFound');
+  updateSummary();
+  updateProceedBtn();
+}
+
+function clearClient() {
+  currentClient = null;
+  clientMode = 'empty';
+  hideClientSearchSuggestions();
+  resetClientQrPreview();
+  resetClientMobileCodePanel();
+  document.getElementById('phoneInput').value = '';
+  document.getElementById('redeemInput').value = '';
+  showState('stateEmpty');
+  updateSummary();
+  updateProceedBtn();
+  document.getElementById('phoneInput').focus();
+}
+
+function skipClient() {
+  currentClient = null;
+  clientMode = 'skipped';
+  hideClientSearchSuggestions();
+  resetClientQrPreview();
+  resetClientMobileCodePanel();
+  showState('stateSkipped');
+  updateSummary();
+  updateProceedBtn();
+}
+
+function getClientMobileCodeStatus(client) {
+  if (!client) return 'Выберите клиента, чтобы выдать одноразовый код';
+  if (client.has_password) {
+    return 'У клиента уже есть пароль. Здесь можно выдать новый код для входа или сброса пароля';
+  }
+  return 'Если клиент не сохранил первый код, здесь можно выдать новый для входа и создания пароля';
+}
+
+function formatMobileCodeLifetime(seconds) {
+  const ttl = Number(seconds || 0);
+  if (!Number.isFinite(ttl) || ttl <= 0) return 'несколько минут';
+  const minutes = Math.max(1, Math.round(ttl / 60));
+  return minutes === 1 ? 'около 1 минуты' : `около ${minutes} минут`;
+}
+
+function resetClientMobileCodePanel(client = currentClient) {
+  const card = document.getElementById('clientMobileCodeCard');
+  const status = document.getElementById('clientMobileCodeStatus');
+  const wrap = document.getElementById('clientMobileCodeValueWrap');
+  const value = document.getElementById('clientMobileCodeValue');
+  const meta = document.getElementById('clientMobileCodeMeta');
+  const btn = document.getElementById('btnIssueMobileCode');
+  const hasClient = !!client;
+
+  if (card) card.style.display = hasClient ? '' : 'none';
+  if (status) status.textContent = getClientMobileCodeStatus(client);
+  if (wrap) wrap.classList.add('d-none');
+  if (value) value.textContent = '----';
+  if (meta) meta.textContent = 'Код появится здесь сразу после выдачи';
+  if (btn) {
+    btn.disabled = !hasClient;
+    btn.innerHTML = '<i class="bi bi-key-fill me-1"></i>Выдать код';
+  }
+}
+
+async function issueCurrentClientMobileCode() {
+  if (!ensureCashierShiftActive()) return;
+  if (!currentClient?.phone) {
+    showToast('Сначала выберите клиента, чтобы выдать код', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('btnIssueMobileCode');
+  const wrap = document.getElementById('clientMobileCodeValueWrap');
+  const value = document.getElementById('clientMobileCodeValue');
+  const meta = document.getElementById('clientMobileCodeMeta');
+  const status = document.getElementById('clientMobileCodeStatus');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Выдаем код';
+
+  try {
+    const r = await apiPostCashier('/api/cash/issue-mobile-code', { phone: currentClient.phone });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      showToast(data.detail || 'Не удалось выдать одноразовый код', r.status === 429 ? 'warning' : 'danger');
+      return;
+    }
+
+    currentClient = {
+      ...currentClient,
+      has_password: data.has_password,
+      phone_verified: data.phone_verified,
+    };
+    if (status) status.textContent = getClientMobileCodeStatus(currentClient);
+    if (wrap) wrap.classList.remove('d-none');
+    if (value) value.textContent = data.code || '----';
+    if (meta) {
+      meta.textContent = `Действует ${formatMobileCodeLifetime(data.expires_in)}. Выдал: ${data.issued_by || 'кассир'}`;
+    }
+    showToast('Одноразовый код готов', 'success');
+  } catch {
+    showToast('Не удалось выдать одноразовый код', 'danger');
+  } finally {
+    btn.disabled = !currentClient?.phone;
+    btn.innerHTML = '<i class="bi bi-key-fill me-1"></i>Выдать код';
+  }
+}
+
+function updateClientQrPreview(data = null) {
+  const client = data || currentClient;
+  const inlineCard = document.getElementById('clientQrInlineCard');
+  const inlineImage = document.getElementById('clientQrInlineImage');
+  const inlineEmpty = document.getElementById('clientQrInlineEmpty');
+  const image = document.getElementById('clientQrPreviewImage');
+  const empty = document.getElementById('clientQrPreviewEmpty');
+  const phone = document.getElementById('clientQrPreviewPhone');
+  const btn = document.getElementById('btnShowClientQr');
+  const hasQr = !!(client && client.qr_base64);
+  const hasClient = !!client;
+
+  if (inlineImage) {
+    inlineImage.src = hasQr ? `data:image/png;base64,${client.qr_base64}` : '';
+    inlineImage.style.display = hasQr ? 'inline-block' : 'none';
+  }
+  if (inlineCard) inlineCard.style.display = hasClient ? '' : 'none';
+  if (inlineEmpty) {
+    inlineEmpty.style.display = hasQr ? 'none' : 'block';
+    inlineEmpty.textContent = hasClient
+      ? 'QR-код загружается автоматически. Если нужно, нажмите Увеличить.'
+      : 'QR-код загружается автоматически после выбора клиента';
+  }
+
+  if (image) {
+    image.src = hasQr ? `data:image/png;base64,${client.qr_base64}` : '';
+    image.style.display = hasQr ? 'inline-block' : 'none';
+  }
+  if (empty) empty.style.display = hasQr ? 'none' : 'block';
+  if (phone) phone.textContent = client?.phone || '—';
+  if (btn) {
+    btn.disabled = !hasClient;
+    btn.innerHTML = hasQr
+      ? '<i class="bi bi-arrows-fullscreen me-1"></i>Увеличить'
+      : '<i class="bi bi-arrow-repeat me-1"></i>Загрузить QR';
+  }
+}
+
+function resetClientQrPreview() {
+  updateClientQrPreview(null);
+}
+
+async function ensureClientQrData(force = false) {
+  if (!currentClient?.phone) return null;
+  if (!force && currentClient.qr_base64) return currentClient;
+
+  try {
+    const r = await apiPost('/api/cash/client-info', { phone: currentClient.phone });
+    if (!r.ok) return null;
+    const data = await r.json();
+    currentClient = { ...currentClient, ...data };
+    updateClientQrPreview(currentClient);
+    return currentClient;
+  } catch {
+    return null;
+  }
+}
+
+async function showClientQrModal() {
+  if (!currentClient?.phone) {
+    showToast('Сначала выберите клиента, чтобы показать его QR-код', 'warning');
+    return;
+  }
+  if (!currentClient.qr_base64) {
+    updateClientQrPreview(currentClient);
+    await ensureClientQrData(true);
+  }
+  if (!currentClient?.qr_base64) {
+    showToast('Не удалось загрузить QR-код клиента. Попробуйте еще раз', 'warning');
+    return;
+  }
+  updateClientQrPreview(currentClient);
+  const modalEl = document.getElementById('clientQrPreviewModal');
+  if (!modalEl) return;
+  bootstrap.Modal.getOrCreateInstance(modalEl).show();
+}
+
+// ── Регистрация нового клиента ─────────────────────────────────────────────
+async function registerClient() {
+  if (!ensureCashierShiftActive()) return;
+  const phone = document.getElementById('phoneInput').value.trim();
+  const name = document.getElementById('regName').value.trim();
+  if (!phone) return;
+
+  const btn = document.getElementById('btnRegister');
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${tr('cashier_registering')}`;
+
+  try {
+    const r = await apiPostCashierQueued('/api/cash/register', {phone, name: name || null}, {
+      replayLabel: 'cashier-register-client',
+    });
+    if (window.AZSOffline?.isQueuedResponse(r)) {
+      showToast('Регистрация клиента поставлена в очередь. Продолжите после восстановления связи', 'warning');
+      return;
+    }
+    if (r.ok) {
+      const data = await r.json();
+      showToast(`✓ ${tr('cashier_registered')}`, 'success');
+      setClientFound(data, {openQr: true});
+    } else {
+      const err = await r.json();
+      showToast(err.detail || tr('cashier_registration_error'), 'danger');
+    }
+  } catch {
+    showToast(tr('cashier_connection_error'), 'danger');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<i class="bi bi-person-check me-1"></i>${tr('button_register_and_continue')}`;
+  }
+}
+
+// ── Списание: режимы и логика ──────────────────────────────────────────────
+let redeemMode = 'none'; // 'none' | 'custom' | 'max'
+
+function setRedeemMode(mode) {
+  redeemMode = mode;
+  document.getElementById('redeemModeNone').classList.toggle('active', mode === 'none');
+  document.getElementById('redeemModeCustom').classList.toggle('active', mode === 'custom');
+  document.getElementById('redeemModeMax').classList.toggle('active', mode === 'max');
+  // btn-outline -> btn-* активная стилизация
+  document.getElementById('redeemModeNone').classList.toggle('btn-secondary', mode === 'none');
+  document.getElementById('redeemModeNone').classList.toggle('btn-outline-secondary', mode !== 'none');
+  document.getElementById('redeemModeCustom').classList.toggle('btn-primary', mode === 'custom');
+  document.getElementById('redeemModeCustom').classList.toggle('btn-outline-primary', mode !== 'custom');
+  document.getElementById('redeemModeMax').classList.toggle('btn-warning', mode === 'max');
+  document.getElementById('redeemModeMax').classList.toggle('btn-outline-warning', mode !== 'max');
+
+  document.getElementById('redeemCustomBlock').style.display = mode === 'custom' ? '' : 'none';
+
+  if (mode === 'max') {
+    fillMaxRedeem();
+  } else if (mode === 'none') {
+    document.getElementById('redeemInput').value = '';
+    updateRedeemHint();
+  } else {
+    // custom — фокус на поле
+    setTimeout(() => document.getElementById('redeemInput').focus(), 50);
+    updateRedeemHint();
+  }
+}
+
+function updateRedeemHint() {
+  if (!currentClient) return;
+  const balance = parseFloat(currentClient.bonus_balance || 0);
+  const amount = parseFloat(document.getElementById('txAmount').value) || 0;
+  const maxAllowed = amount > 0 ? Math.min(balance, amount) : balance;
+
+  // Авто-ограничение: нельзя ввести больше максимума
+  const inp = document.getElementById('redeemInput');
+  if (redeemMode !== 'none') {
+    const raw = parseFloat(inp.value) || 0;
+    if (raw > maxAllowed) {
+      inp.value = maxAllowed.toFixed(2);
+    }
+  }
+  const entered = redeemMode === 'none' ? 0 : (parseFloat(inp.value) || 0);
+
+  inp.classList.remove('is-invalid');
+  let hint = `Баланс: <b>${balance.toFixed(2)}</b> бонусов`;
+  if (amount > 0 && balance > 0) hint += ` · Можно списать до: <b>${maxAllowed.toFixed(2)}</b>`;
+  if (entered > 0 && amount > 0) {
+    const toPay = Math.max(0, amount - entered);
+    hint += ` · <span class="text-success fw-semibold">${tr('cashier_sum_to_pay')}: ${money(toPay)}</span>`;
+  }
+  document.getElementById('redeemHint').innerHTML = hint;
+  updatePayTotal();
+  updateSummary();
+}
+
+function updatePayTotal() {
+  const amount = parseFloat(document.getElementById('txAmount').value) || 0;
+  const entered = redeemMode === 'none' ? 0 : (parseFloat(document.getElementById('redeemInput').value) || 0);
+  const toPay = Math.max(0, amount - entered);
+  const btn = document.getElementById('btnProceed');
+  const block = document.getElementById('payTotalBlock');
+  const ptNoAmount = document.getElementById('ptNoAmount');
+  const ptCalc = document.getElementById('ptCalc');
+
+  if (redeemMode !== 'none' && entered > 0) {
+    block.style.display = '';
+    if (amount > 0) {
+      ptNoAmount.style.display = 'none';
+      ptCalc.style.display = '';
+      document.getElementById('ptAmount').textContent = money(amount);
+      document.getElementById('ptRedeem').textContent = '−' + entered.toFixed(2);
+      document.getElementById('ptFinal').textContent = money(toPay);
+      btn.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i>${tr('button_process_receipt')} · ${tr('cashier_sum_to_pay')}: <b>${money(toPay)}</b>`;
+    } else {
+      ptNoAmount.style.display = '';
+      ptCalc.style.display = 'none';
+      btn.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i>${tr('button_process_receipt')}`;
+    }
+  } else {
+    block.style.display = 'none';
+    btn.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i>${tr('button_process_receipt')}`;
+  }
+}
+
+function fillMaxRedeem() {
+  if (!currentClient) return;
+  const balance = parseFloat(currentClient.bonus_balance || 0);
+  const amount = parseFloat(document.getElementById('txAmount').value) || 0;
+  const maxAllowed = amount > 0 ? Math.min(balance, amount) : balance;
+  document.getElementById('redeemInput').value = maxAllowed.toFixed(2);
+  updateRedeemHint();
+}
+
+function clearRedeemInput() {
+  redeemMode = 'none';
+  setRedeemMode('none');
+}
+
+// ── Сводка ─────────────────────────────────────────────────────────────────
+let _previewTimer = null;
+
+function updateSummary() {
+  const amount = parseFloat(document.getElementById('txAmount').value) || 0;
+  const isFuel = document.getElementById('locFuel').checked;
+  const liters = parseFloat(document.getElementById('fuelLiters').value) || 0;
+  const redeem = redeemMode === 'none' ? 0 : (parseFloat(document.getElementById('redeemInput').value) || 0);
+
+  const chips = [];
+  if (amount > 0) {
+    chips.push(`<span class="summary-chip text-primary"><i class="bi bi-receipt"></i> ${tr('amount')}: <b>${money(amount)}</b></span>`);
+  }
+  if (isFuel) {
+    const sel = document.getElementById('fuelTypeSelect');
+    const opt = sel.options[sel.selectedIndex];
+    const fuelName = (opt && opt.dataset.name) ? opt.dataset.name : '';
+    if (fuelName) {
+      chips.push(`<span class="summary-chip text-primary"><i class="bi bi-fuel-pump"></i> ${fuelName}</span>`);
+    }
+    if (liters > 0) {
+      chips.push(`<span class="summary-chip text-info"><i class="bi bi-droplet-half"></i> ${tr('liters')}: <b>${num(liters, 3)}</b></span>`);
+    }
+  }
+  if (currentClient) {
+    chips.push(`<span class="summary-chip text-success"><i class="bi bi-person-check"></i> ${currentClient.name || currentClient.phone}</span>`);
+    if (redeem > 0) {
+      chips.push(`<span class="summary-chip text-warning"><i class="bi bi-dash-circle"></i> ${tr('label_type', 'Списание')}: <b>${num(redeem, 2)}</b></span>`);
+    }
+  } else if (clientMode === 'skipped') {
+    chips.push(`<span class="summary-chip text-secondary"><i class="bi bi-person-dash"></i> ${tr('cashier_without_client')}</span>`);
+    chips.push(`<span class="summary-chip text-warning"><i class="bi bi-exclamation-triangle"></i> Бонусы не начисляются без выбранного клиента</span>`);
+  }
+
+  // Placeholder для бонусов (будет обновлён асинхронно)
+  if (amount > 0 && currentClient) {
+    chips.push(`<span class="summary-chip text-success" id="bonusPreviewChip"><i class="bi bi-gift"></i> Бонусов: <b id="bonusPreviewVal">...</b></span>`);
+  }
+
+  document.getElementById('summaryRow').innerHTML = chips.length
+    ? chips.join('')
+    : `<span class="summary-chip text-muted"><i class="bi bi-info-circle"></i> ${tr('cashier_enter_receipt_amount')}</span>`;
+
+  // Загрузить предпросмотр бонусов
+  if (amount > 0 && currentClient) {
+    clearTimeout(_previewTimer);
+    _previewTimer = setTimeout(() => loadBonusPreview(amount, isFuel, liters), 300);
+  }
+}
+
+async function loadBonusPreview(amount, isFuel, liters) {
+  const location = isFuel ? 'fuel' : 'base';
+  let url = `/api/cash/preview-accrual?location=${location}&purchase_amount=${amount}`;
+  if (isFuel && liters > 0) url += `&fuel_liters=${liters}`;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const bonus = parseFloat(data.amount_bonus || 0);
+    const el = document.getElementById('bonusPreviewVal');
+    if (!el) return;
+    if (bonus > 0) {
+      el.textContent = '+' + bonus.toFixed(2);
+      el.closest('.summary-chip').className = 'summary-chip text-success';
+    } else {
+      el.textContent = tr('cashier_bonus_no_rule');
+      el.closest('.summary-chip').className = 'summary-chip text-muted';
+    }
+  } catch {}
+}
+
+// ── Кнопка ПРОВЕСТИ ────────────────────────────────────────────────────────
+function updateProceedBtn() {
+  const amount = parseFloat(document.getElementById('txAmount').value) || 0;
+  const cashierReady = !!currentCashier && hasActiveCashierShift();
+  const clientReady = clientMode === 'found' || clientMode === 'skipped';
+  const isFuel = document.getElementById('locFuel').checked;
+  const fuelSelected = !isFuel || !!document.getElementById('fuelTypeSelect').value;
+  const fuelPrice = parseFloat(document.getElementById('fuelPrice').value) || 0;
+  const fuelLiters = parseFloat(document.getElementById('fuelLiters').value) || 0;
+  const fuelReady = !isFuel || (fuelSelected && fuelPrice > 0 && fuelLiters > 0);
+  const ready = cashierReady && amount > 0 && clientReady && fuelReady;
+  document.getElementById('btnProceed').disabled = !ready;
+}
+
+// ── ПРОВЕСТИ ───────────────────────────────────────────────────────────────
+async function proceed() {
+  if (!currentCashier) {
+    showToast(tr('cashier_signin_required'), 'warning');
+    return;
+  }
+  if (!ensureCashierShiftActive()) {
+    return;
+  }
+  if (!navigator.onLine) {
+    showToast('Проведение чека требует стабильной связи с сервером. Для безопасных операций очередь включена, но чек сейчас в очередь не ставится', 'warning');
+    return;
+  }
+  const amount = parseFloat(document.getElementById('txAmount').value);
+  let checkId = document.getElementById('txCheckId').value;
+  if (!checkId) {
+    regenerateCheck();
+    checkId = document.getElementById('txCheckId').value;
+  }
+  const location = document.getElementById('locFuel').checked ? 'fuel' : 'base';
+  const isFuel = location === 'fuel';
+  const liters = isFuel ? (parseFloat(document.getElementById('fuelLiters').value) || null) : null;
+  const pricePerLiter = isFuel ? (parseFloat(document.getElementById('fuelPrice').value) || null) : null;
+  let fuelName = null;
+  if (isFuel) {
+    const sel = document.getElementById('fuelTypeSelect');
+    const opt = sel.options[sel.selectedIndex];
+    fuelName = (opt && opt.dataset && opt.dataset.name) ? opt.dataset.name : null;
+  }
+  const redeemAmt = redeemMode === 'none' ? 0 : (parseFloat(document.getElementById('redeemInput').value) || 0);
+
+  const btn = document.getElementById('btnProceed');
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${tr('button_processing')}`;
+
+  try {
+    let redeemDone = false;
+    let accrueDone = false;
+    let redeemedBonus = 0;
+    let accruedBonus = 0;
+
+    if (!currentClient && clientMode === 'skipped') {
+      showToast('Чек оформляется без клиента: бонусы не будут начислены и списаны', 'warning');
+    }
+
+    // 1. Списание (если указано и есть клиент)
+    if (redeemAmt > 0 && currentClient) {
+      const r = await apiPostCashier('/api/cash/redeem', {
+        phone: currentClient.phone,
+        purchase_amount: amount,
+        bonus_to_redeem: redeemAmt,
+        check_id: checkId + '-R',
+        location,
+        cashier_id: currentCashier ? currentCashier.id : null,
+      });
+      if (r.ok) {
+        const data = await r.json();
+        redeemedBonus = parseFloat(data.amount_bonus || 0);
+        redeemDone = true;
+      } else {
+        const err = await r.json();
+        showToast(`${tr('cashier_redemption_error')}: ${(err.detail || '')}`, 'danger');
+        return;
+      }
+    }
+
+    // 2. Начисление (если есть клиент)
+    // purchase_amount = полная сумма (для min_purchase проверки и bonus_per_liter)
+    // cash_amount = сумма деньгами (для % начисления; 0 если всё оплачено бонусами)
+    const cashAmount = Math.max(0, amount - redeemedBonus);
+    if (currentClient && amount > 0) {
+      const r = await apiPostCashier('/api/cash/accrue', {
+        phone: currentClient.phone,
+        purchase_amount: amount,
+        cash_amount: cashAmount,
+        fuel_liters: liters,
+        check_id: checkId,
+        location,
+        cashier_id: currentCashier ? currentCashier.id : null,
+      });
+      if (r.ok) {
+        const data = await r.json();
+        accruedBonus = parseFloat(data.amount_bonus || 0);
+        accrueDone = true;
+      } else {
+        const err = await r.json();
+        showToast(`${tr('cashier_accrual_error')}: ${(err.detail || '')}`, 'danger');
+        return;
+      }
+    }
+
+    // 3. Результат
+    const parts = [];
+    if (redeemDone) parts.push(`списано <b>${redeemedBonus.toFixed(2)}</b> бонусов`);
+    if (accrueDone) {
+      if (accruedBonus > 0) {
+        parts.push(`начислено <b>${accruedBonus.toFixed(2)}</b> бонусов`);
+      } else {
+        parts.push(cashAmount === 0
+          ? 'начислено 0 бонусов (чек оплачен бонусами)'
+          : 'бонусы не начислены (нет правила)');
+      }
+    }
+    const msg = parts.length ? parts.join(', ') : tr('cashier_receipt_done');
+    const successMessage = '✓ ' + msg.charAt(0).toUpperCase() + msg.slice(1);
+    showToast(successMessage, 'success');
+
+    // 3.1 Лог продажи топлива для отчётности (в т.ч. без клиента)
+    if (isFuel && fuelName && liters && pricePerLiter) {
+      try {
+        const rSale = await apiPostCashier('/api/cash/fuel-sale', {
+          total_rub: amount,
+          fuel_type: fuelName,
+          liters,
+          price_per_liter: pricePerLiter,
+          cashier_name: currentCashier ? currentCashier.name : null,
+          phone: currentClient ? currentClient.phone : null,
+          sale_date: null,
+          check_id: checkId,
+        });
+        if (!rSale.ok) {
+          // Не блокируем проведение чека, но покажем понятный текст
+          const err = await rSale.json().catch(() => ({}));
+          showToast(`${tr('cashier_write_report_failed')}: ${(err.detail || '')}`, 'warning');
+        }
+      } catch {
+        showToast(tr('cashier_write_report_failed'), 'warning');
+      }
+    }
+
+    try {
+      const rReceipt = await apiPostCashier('/api/cash/receipt-processed', {
+        check_id: checkId,
+        purchase_amount: amount,
+        location,
+        has_client: !!currentClient,
+        redeem_bonus: redeemedBonus,
+        accrued_bonus: accrueDone ? accruedBonus : 0,
+        fuel_liters: liters,
+      });
+      if (!rReceipt.ok) {
+        const err = await rReceipt.json().catch(() => ({}));
+        showToast(`${tr('cashier_write_report_failed')}: ${(err.detail || '')}`, 'warning');
+      }
+    } catch {
+      showToast(tr('cashier_write_report_failed'), 'warning');
+    }
+
+    // Добавить в историю
+    addOp({amount, liters, checkId, location, redeemAmt: redeemedBonus,
+      accruedBonus: accrueDone ? accruedBonus : null,
+      clientName: currentClient?.name || currentClient?.phone || null,
+      canCancel: true,
+      cancelled: false});
+
+    try {
+      sessionStorage.setItem(SS_CASHIER_FLASH_TOAST, JSON.stringify({message: successMessage, type: 'success'}));
+      sessionStorage.setItem(SS_CASHIER_REFOCUS_SEARCH, '1');
+    } catch {}
+    window.location.reload();
+    return;
+
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i>${tr('button_process_receipt')}`;
+    updatePayTotal();
+  }
+}
+
+// ── История ────────────────────────────────────────────────────────────────
+function addOp(op) {
+  const time = appI18n.formatTime(new Date(), {hour:'2-digit', minute:'2-digit'});
+  sessionOps.unshift({...op, time, canCancel: op.canCancel !== false, cancelled: !!op.cancelled});
+  sessionOpsPage = 1;
+  persistSessionOps();
+  renderOps();
+}
+
+function renderOps() {
+  const el = document.getElementById('opList');
+  const paginationEl = document.getElementById('opPagination');
+  document.getElementById('opCount').textContent = sessionOps.length;
+  if (!sessionOps.length) {
+    el.innerHTML = `<div class="text-muted small text-center py-3">${tr('cashier_no_operations')}</div>`;
+    if (paginationEl) {
+      paginationEl.classList.add('d-none');
+      paginationEl.innerHTML = '';
+    }
+    return;
+  }
+  const totalPages = Math.max(1, Math.ceil(sessionOps.length / OPS_PAGE_SIZE));
+  sessionOpsPage = Math.min(Math.max(1, sessionOpsPage), totalPages);
+  const startIndex = (sessionOpsPage - 1) * OPS_PAGE_SIZE;
+  const currentPageItems = sessionOps.slice(startIndex, startIndex + OPS_PAGE_SIZE);
+  el.innerHTML = currentPageItems.map(op => {
+    const locLabel = op.location === 'fuel' ? tr('cashier_station') : tr('cashier_store');
+    const litersStr = op.liters ? ` · ${op.liters.toFixed(3)} л` : '';
+    const clientStr = op.clientName ? ` · ${op.clientName}` : ` · ${tr('cashier_without_client_short')}`;
+    const redeemStr = op.redeemAmt > 0
+      ? `<span class="text-danger ms-2">-${op.redeemAmt.toFixed(2)}</span>` : '';
+    const accrueStr = op.accruedBonus !== null
+      ? `<span class="text-success ms-2">${op.accruedBonus > 0 ? '+' + op.accruedBonus.toFixed(2) : '0'}</span>` : '';
+    const stateBadge = op.cancelled
+      ? `<span class="badge bg-danger-subtle text-danger border ms-2">${tr('cashier_cancelled', 'Отменён')}</span>`
+      : '';
+    return `
+    <div class="op-row">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi ${op.cancelled ? 'bi-arrow-counterclockwise text-danger' : 'bi-check-circle-fill text-success'}"></i>
+        <div>
+          <div class="small fw-semibold">${money(op.amount)} · ${locLabel}${litersStr}${clientStr}${stateBadge}</div>
+          <div class="text-muted" style="font-size:.72rem">Чек ${op.checkId} · ${op.time}</div>
+        </div>
+      </div>
+      <div class="text-end small">
+        ${redeemStr}${accrueStr}
+        <div class="text-muted" style="font-size:.7rem">бонусов</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  if (!paginationEl) return;
+  if (totalPages <= 1) {
+    paginationEl.classList.add('d-none');
+    paginationEl.innerHTML = '';
+    return;
+  }
+  const pageButtons = Array.from({length: totalPages}, (_, index) => {
+    const page = index + 1;
+    const activeClass = page === sessionOpsPage ? 'btn-primary' : 'btn-outline-secondary';
+    return `<button type="button" class="btn btn-sm ${activeClass}" onclick="setSessionOpsPage(${page})">${page}</button>`;
+  }).join('');
+  paginationEl.classList.remove('d-none');
+  paginationEl.innerHTML = `
+    <div class="small text-muted">Показано ${startIndex + 1}-${Math.min(startIndex + OPS_PAGE_SIZE, sessionOps.length)} из ${sessionOps.length}</div>
+    <div class="d-flex align-items-center gap-1 flex-wrap">
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setSessionOpsPage(${sessionOpsPage - 1})" ${sessionOpsPage <= 1 ? 'disabled' : ''}>
+        <i class="bi bi-chevron-left"></i>
+      </button>
+      ${pageButtons}
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setSessionOpsPage(${sessionOpsPage + 1})" ${sessionOpsPage >= totalPages ? 'disabled' : ''}>
+        <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>`;
+}
+
+// ── Показать состояние клиента ─────────────────────────────────────────────
+function showState(id) {
+  if (id !== 'stateEmpty') hideClientSearchSuggestions();
+  ['stateEmpty','stateFound','stateNotFound','stateSkipped']
+    .forEach(s => document.getElementById(s).classList.toggle('d-none', s !== id));
+}
+</script>
+<script src="/static/cashier-runtime.js"></script>
+{% endblock %}

@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Вход сотрудников</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5efe5;
+      --bg-accent: #d8e5d0;
+      --card: rgba(255, 251, 245, 0.86);
+      --card-border: rgba(77, 52, 32, 0.12);
+      --ink: #2b2119;
+      --muted: #6b5d52;
+      --cashier: #2563eb;
+      --admin: #14532d;
+      --shadow: 0 24px 60px rgba(67, 48, 34, 0.16);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Manrope', sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(20, 83, 45, 0.16), transparent 34%),
+        linear-gradient(135deg, var(--bg) 0%, #fbf8f2 54%, var(--bg-accent) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .login-shell {
+      width: min(1080px, 100%);
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      background: rgba(255, 255, 255, 0.56);
+      backdrop-filter: blur(16px);
+    }
+
+    .hero-panel {
+      padding: 48px;
+      background:
+        linear-gradient(155deg, rgba(43, 33, 25, 0.92), rgba(70, 53, 40, 0.84)),
+        linear-gradient(135deg, #2f241d, #524031);
+      color: #fff8f0;
+      position: relative;
+    }
+
+    .hero-panel::after {
+      content: '';
+      position: absolute;
+      inset: auto -80px -120px auto;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: rgba(216, 229, 208, 0.16);
+      filter: blur(10px);
+    }
+
+    .hero-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid rgba(255, 248, 240, 0.16);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .hero-title {
+      margin: 20px 0 14px;
+      font-size: clamp(2rem, 4vw, 3.6rem);
+      line-height: 1;
+      font-weight: 800;
+      max-width: 8ch;
+    }
+
+    .hero-text {
+      max-width: 34rem;
+      color: rgba(255, 248, 240, 0.78);
+      font-size: 1rem;
+      line-height: 1.65;
+    }
+
+    .hero-points {
+      margin: 28px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 12px;
+    }
+
+    .hero-points li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: rgba(255, 248, 240, 0.9);
+    }
+
+    .hero-points i {
+      width: 36px;
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      background: rgba(255, 248, 240, 0.12);
+    }
+
+    .form-panel {
+      padding: 32px;
+      background: var(--card);
+      display: flex;
+      align-items: center;
+    }
+
+    .panel-card {
+      width: 100%;
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.66);
+      padding: 28px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
+    }
+
+    .form-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .role-tab {
+      border: 0;
+      border-radius: 18px;
+      padding: 14px 16px;
+      text-align: left;
+      background: #efe8de;
+      color: var(--ink);
+      transition: transform 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .role-tab.active {
+      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(43, 33, 25, 0.14);
+    }
+
+    .role-tab[data-role="cashier"].active { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+    .role-tab[data-role="admin"].active { background: linear-gradient(135deg, #166534, #14532d); }
+
+    .role-tab small {
+      display: block;
+      margin-top: 2px;
+      opacity: 0.8;
+    }
+
+    .form-title {
+      margin: 0 0 6px;
+      font-size: 1.6rem;
+      font-weight: 800;
+    }
+
+    .form-subtitle {
+      margin: 0 0 22px;
+      color: var(--muted);
+    }
+
+    .status-box {
+      display: none;
+      border-radius: 16px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      font-size: 0.95rem;
+    }
+
+    .status-box.show { display: block; }
+    .status-box.error { background: #ffe3e0; color: #842029; }
+    .status-box.success { background: #d1e7dd; color: #0f5132; }
+
+    .form-label {
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .form-control {
+      border-radius: 16px;
+      border-color: rgba(43, 33, 25, 0.14);
+      min-height: 52px;
+      padding-inline: 16px;
+    }
+
+    .submit-btn {
+      width: 100%;
+      border: 0;
+      border-radius: 18px;
+      min-height: 54px;
+      font-weight: 800;
+      color: #fff;
+      transition: transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 26px rgba(43, 33, 25, 0.16);
+    }
+
+    .submit-btn.cashier { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+    .submit-btn.admin { background: linear-gradient(135deg, #166534, #14532d); }
+
+    .foot-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 920px) {
+      .login-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-panel,
+      .form-panel {
+        padding: 28px;
+      }
+
+      .hero-title {
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="login-shell">
+    <section class="hero-panel">
+      <div class="hero-kicker">
+        <i class="bi bi-shield-lock"></i>
+        Закрытый вход для сотрудников
+      </div>
+      <h1 class="hero-title">Админка и касса доступны только после входа</h1>
+      <p class="hero-text">
+        Используйте отдельную страницу входа, чтобы посторонние не попадали в служебные разделы. После авторизации система сама откроет нужную страницу.
+      </p>
+      <ul class="hero-points">
+        <li><i class="bi bi-person-badge"></i><span>Кассир попадает в кассу, клиентов и цены на топливо только после проверки логина.</span></li>
+        <li><i class="bi bi-person-lock"></i><span>Администратор входит отдельно и получает доступ к дашборду и настройкам.</span></li>
+        <li><i class="bi bi-journal-check"></i><span>Отчёты теперь тоже закрыты и открываются только staff-пользователям.</span></li>
+      </ul>
+    </section>
+
+    <section class="form-panel">
+      <div class="panel-card">
+        <div class="form-tabs" id="roleTabs">
+          <button type="button" class="role-tab" data-role="cashier">
+            <strong>Кассир</strong>
+            <small>Касса, клиенты, цены, отчёты</small>
+          </button>
+          <button type="button" class="role-tab" data-role="admin">
+            <strong>Администратор</strong>
+            <small>Дашборд, правила, кассиры, отчёты</small>
+          </button>
+        </div>
+
+        <h2 class="form-title" id="formTitle">Вход кассира</h2>
+        <p class="form-subtitle" id="formSubtitle">Введите логин и пароль, выданные администратором.</p>
+
+        <div id="statusBox" class="status-box" role="status" aria-live="polite"></div>
+
+        <form id="staffLoginForm">
+          <div class="mb-3">
+            <label class="form-label" for="username">Логин</label>
+            <input id="username" class="form-control" autocomplete="username" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="password">Пароль</label>
+            <input id="password" type="password" class="form-control" autocomplete="current-password" required>
+          </div>
+          <button id="submitBtn" type="submit" class="submit-btn cashier">
+            <span class="btn-label"><i class="bi bi-box-arrow-in-right me-2"></i>Войти</span>
+          </button>
+        </form>
+
+        <div class="foot-note" id="footNote">
+          После входа откроется касса. Если вы пытались открыть закрытый раздел, система вернёт вас именно туда.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const requestedRole = (params.get('role') || 'cashier').toLowerCase();
+    const nextPath = (params.get('next') || '/cashier').trim();
+    const LS_CASHIER_TOKEN = 'azs_cashier_token';
+    const LS_ADMIN_IDENTITY = 'azs_admin_identity';
+    const LS_CASHIER_IDENTITY = 'azs_cashier_identity';
+    const roleTabs = Array.from(document.querySelectorAll('.role-tab'));
+    const form = document.getElementById('staffLoginForm');
+    const formTitle = document.getElementById('formTitle');
+    const formSubtitle = document.getElementById('formSubtitle');
+    const submitBtn = document.getElementById('submitBtn');
+    const footNote = document.getElementById('footNote');
+    const statusBox = document.getElementById('statusBox');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+
+    let currentRole = requestedRole === 'admin' ? 'admin' : 'cashier';
+
+    function setStatus(message, kind) {
+      statusBox.textContent = message || '';
+      statusBox.className = `status-box ${message ? 'show' : ''} ${kind || ''}`.trim();
+    }
+
+    function redirectTarget() {
+      if (currentRole === 'admin') {
+        return nextPath && nextPath.startsWith('/') ? nextPath : '/admin';
+      }
+      return '/cashier';
+    }
+
+    function applyRole(role) {
+      currentRole = role === 'admin' ? 'admin' : 'cashier';
+      roleTabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.role === currentRole));
+      submitBtn.classList.toggle('cashier', currentRole === 'cashier');
+      submitBtn.classList.toggle('admin', currentRole === 'admin');
+      if (currentRole === 'admin') {
+        formTitle.textContent = 'Вход администратора';
+        formSubtitle.textContent = 'Используйте учётные данные администратора для доступа к управлению системой.';
+        footNote.textContent = 'После входа администратору будут доступны все закрытые разделы системы.';
+      } else {
+        formTitle.textContent = 'Вход кассира';
+        formSubtitle.textContent = 'Введите логин и пароль, выданные администратором.';
+        footNote.textContent = 'После входа откроется только касса.';
+      }
+      setStatus('', '');
+    }
+
+    async function submitLogin(event) {
+      event.preventDefault();
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+      if (!username || !password) {
+        setStatus('Введите логин и пароль.', 'error');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Проверка...';
+      setStatus('', '');
+
+      try {
+        const endpoint = currentRole === 'admin' ? '/api/admin/login' : '/api/cashiers/login';
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          setStatus(data.detail || 'Не удалось войти. Проверьте логин и пароль.', 'error');
+          return;
+        }
+
+        if (currentRole === 'cashier') {
+          localStorage.setItem(LS_CASHIER_TOKEN, data.access_token || '');
+          localStorage.setItem(LS_CASHIER_IDENTITY, String(data.cashier?.id || username));
+        } else {
+          localStorage.setItem(LS_ADMIN_IDENTITY, username.toLowerCase());
+        }
+
+        passwordInput.value = '';
+        setStatus('Вход выполнен. Перенаправление...', 'success');
+        window.location.href = redirectTarget();
+      } catch {
+        setStatus('Ошибка сети. Повторите попытку.', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span class="btn-label"><i class="bi bi-box-arrow-in-right me-2"></i>Войти</span>';
+      }
+    }
+
+    roleTabs.forEach((tab) => {
+      tab.addEventListener('click', () => applyRole(tab.dataset.role));
+    });
+    form.addEventListener('submit', submitLogin);
+    applyRole(currentRole);
+    usernameInput.focus();
+  </script>
+</body>
+</html>

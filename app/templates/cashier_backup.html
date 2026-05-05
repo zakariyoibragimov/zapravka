@@ -1,0 +1,674 @@
+{% extends "base.html" %}
+{% block title %}Касса — АЗС Бонус{% endblock %}
+{% block head %}
+<style>
+  /* Search bar */
+  .search-wrap { background: #fff; border-radius: 16px; padding: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .search-wrap .form-control {
+    border-radius: 10px 0 0 10px;
+    border: 1.5px solid #dee2e6;
+    font-size: 1rem; height: 46px;
+  }
+  .search-wrap .form-control:focus { border-color: #0d6efd; box-shadow: none; }
+  .search-wrap .btn-find {
+    border-radius: 0 10px 10px 0;
+    height: 46px; min-width: 110px;
+    font-weight: 600;
+  }
+
+  /* Client card */
+  #clientCard { animation: slideDown .25s ease; }
+  @keyframes slideDown { from { opacity:0; transform:translateY(-12px) } to { opacity:1; transform:none } }
+
+  .client-avatar {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .level-bronze { background: linear-gradient(135deg,#0d6efd,#0856d6); }
+
+  .balance-box {
+    background: linear-gradient(135deg, #0d6efd, #0856d6);
+    color: #fff; border-radius: 14px; padding: 1.1rem 1.4rem;
+  }
+  .balance-box .label { font-size: .75rem; opacity: .8; text-transform: uppercase; letter-spacing:.05em; }
+  .balance-box .amount { font-size: 2rem; font-weight: 800; line-height: 1.1; }
+  .balance-box .sub { font-size: .8rem; opacity: .75; }
+
+  .stat-pill {
+    background: #f8f9fa; border-radius: 10px;
+    padding: .6rem 1rem; font-size: .85rem;
+  }
+  .stat-pill .val { font-weight: 700; color: #1a1d21; font-size: 1rem; }
+
+  /* Action buttons */
+  .btn-accrue { background: #198754; border: none; color: #fff; border-radius: 10px; padding: .65rem 1.4rem; font-weight: 600; }
+  .btn-accrue:hover { background: #146c43; color: #fff; }
+  .btn-redeem { background: #fff; border: 1.5px solid #dc3545; color: #dc3545; border-radius: 10px; padding: .65rem 1.4rem; font-weight: 600; }
+  .btn-redeem:hover { background: #dc3545; color: #fff; }
+
+  /* Operations history */
+  .op-item { padding: .6rem 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+  .op-item:last-child { border-bottom: none; }
+  .op-plus { color: #198754; font-weight: 700; }
+  .op-minus { color: #dc3545; font-weight: 700; }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 3rem 1rem; color: #9ca3af; }
+  .empty-state i { font-size: 3.5rem; display: block; margin-bottom: .75rem; opacity: .4; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between">
+  <div>
+    <h1><i class="bi bi-cash-register me-2 text-primary"></i>Интерфейс кассира</h1>
+    <div class="text-muted">Поиск клиентов и управление бонусами</div>
+  </div>
+  <span id="clockBadge" class="badge bg-light text-dark border fs-6 px-3 py-2"></span>
+</div>
+
+<!-- Поиск -->
+<div class="search-wrap mb-4">
+  <div class="row g-3 align-items-end">
+    <div class="col">
+      <label class="form-label fw-600 small text-muted text-uppercase" style="letter-spacing:.04em">
+        <i class="bi bi-telephone me-1"></i>Номер телефона клиента
+      </label>
+      <div class="input-group">
+        <input type="tel" id="phoneInput" class="form-control"
+               placeholder="+7 (900) 123-45-67"
+               autocomplete="tel">
+        <button class="btn btn-find btn-primary" id="btnFind" type="button">
+          <i class="bi bi-search me-1"></i>Найти
+        </button>
+      </div>
+    </div>
+    <div class="col-auto">
+      <button class="btn btn-outline-secondary" style="height:46px;border-radius:10px;padding:.65rem 1.1rem"
+              data-bs-toggle="modal" data-bs-target="#qrModal" title="Сканировать QR-код">
+        <i class="bi bi-qr-code-scan fs-5"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Клиент (скрыт по умолчанию) -->
+<div id="clientCard" class="d-none mb-4">
+  <div class="row g-3">
+    <!-- Инфо -->
+    <div class="col-lg-7">
+      <div class="card h-100">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div id="clientAvatar" class="client-avatar level-bronze">ИМ</div>
+            <div>
+              <div id="clientName" class="fw-bold fs-5 lh-1 mb-1">Имя клиента</div>
+              <div id="clientPhone" class="text-muted small"></div>
+            </div>
+          </div>
+
+          <div class="balance-box mb-3">
+            <div class="label">Бонусный баланс</div>
+            <div class="amount" id="clientBalance">0</div>
+            <div class="sub">бонусных рублей</div>
+          </div>
+
+          <div class="row g-2">
+            <div class="col-6">
+              <div class="stat-pill">
+                <div class="text-muted" style="font-size:.73rem">Всего потрачено</div>
+                <div class="val" id="clientSpent">0 ₽</div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="stat-pill">
+                <div class="text-muted" style="font-size:.73rem">ID клиента</div>
+                <div class="val" id="clientId">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Действия -->
+    <div class="col-lg-5">
+      <div class="card h-100">
+        <div class="card-body p-4 d-flex flex-column gap-3">
+          <div class="fw-semibold text-muted small text-uppercase" style="letter-spacing:.05em">Операции</div>
+
+          <button class="btn btn-accrue w-100 d-flex align-items-center gap-2"
+                  data-bs-toggle="modal" data-bs-target="#accrueModal">
+            <i class="bi bi-plus-circle-fill fs-5"></i>
+            <span>
+              <div style="font-size:.95rem">Начислить бонусы</div>
+              <div style="font-size:.75rem;opacity:.8">За покупку / заправку</div>
+            </span>
+          </button>
+
+          <button class="btn btn-redeem w-100 d-flex align-items-center gap-2"
+                  data-bs-toggle="modal" data-bs-target="#redeemModal">
+            <i class="bi bi-dash-circle fs-5"></i>
+            <span>
+              <div style="font-size:.95rem">Списать бонусы</div>
+              <div style="font-size:.75rem;opacity:.7">До 30% от суммы чека</div>
+            </span>
+          </button>
+
+          <hr class="my-1">
+          <button class="btn btn-outline-secondary btn-sm rounded-3" onclick="clearClient()">
+            <i class="bi bi-x-circle me-1"></i>Другой клиент
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- История операций (текущая сессия) -->
+  <div class="card mt-3">
+    <div class="card-body p-3">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="fw-semibold small">Операции в текущей сессии</div>
+        <span id="opCount" class="badge bg-secondary rounded-pill">0</span>
+      </div>
+      <div id="opList">
+        <div class="text-muted small text-center py-2">Операций пока нет</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Пустое состояние -->
+<div id="emptyState">
+  <div class="empty-state">
+    <i class="bi bi-person-badge"></i>
+    <div class="fw-semibold mb-1">Введите номер телефона</div>
+    <div class="small">или отсканируйте QR-код клиента</div>
+  </div>
+</div>
+
+<!-- Ошибка поиска -->
+<div id="notFound" class="d-none">
+  <div class="alert alert-warning d-flex align-items-center gap-3">
+    <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+    <div>
+      <strong>Клиент не найден</strong><br>
+      <span class="small">Клиент будет создан автоматически при первом начислении.</span>
+    </div>
+    <div class="ms-auto d-flex gap-2">
+      <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#accrueModal">
+        <i class="bi bi-plus-circle me-1"></i>Начислить
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- === МОДАЛКИ === -->
+
+<!-- QR-сканер (имитация) -->
+<div class="modal fade" id="qrModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:16px">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title"><i class="bi bi-qr-code-scan me-2 text-primary"></i>Сканирование QR-кода</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="bg-light rounded-3 d-flex align-items-center justify-content-center mb-3"
+             style="height:180px;border:2px dashed #dee2e6">
+          <div class="text-center text-muted">
+            <i class="bi bi-camera fs-1 d-block mb-2 opacity-50"></i>
+            <div class="small">Зона сканирования камеры</div>
+            <div class="small opacity-75">(имитация — введите данные вручную)</div>
+          </div>
+        </div>
+        <label class="form-label small fw-semibold">Данные QR-кода / телефон</label>
+        <input type="text" id="qrInput" class="form-control" placeholder="+79001234567">
+        <div class="form-text">Введите номер телефона или данные из QR-кода клиента</div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button class="btn btn-primary rounded-3 px-4" onclick="applyQr()">
+          <i class="bi bi-check-lg me-1"></i>Применить
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Начисление -->
+<div class="modal fade" id="accrueModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="border-radius:16px">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title"><i class="bi bi-plus-circle-fill me-2 text-success"></i>Начисление бонусов</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="accrueForm">
+        <div class="modal-body row g-3">
+          <div class="col-12">
+            <label class="form-label small fw-semibold">Телефон клиента</label>
+            <input type="tel" id="accruePhone" class="form-control" placeholder="+79001234567" required>
+          </div>
+
+          <!-- Калькулятор топлива -->
+          <div class="col-12">
+            <div class="rounded-3 p-3" style="background:#f0f7ff;border:1.5px solid #cce0ff">
+              <div class="fw-semibold small mb-2"><i class="bi bi-fuel-pump me-1 text-primary"></i>Калькулятор топлива</div>
+              <div class="row g-2 align-items-end">
+                <div class="col-4">
+                  <label class="form-label small text-muted mb-1">Цена за литр (₽)</label>
+                  <input type="number" id="fuelPrice" class="form-control form-control-sm" step="0.01" min="0" placeholder="55.00">
+                </div>
+                <div class="col-4">
+                  <label class="form-label small text-muted mb-1">Объём (литры)</label>
+                  <input type="number" id="fuelLitersCalc" class="form-control form-control-sm" step="0.001" min="0" placeholder="40.000">
+                </div>
+                <div class="col-4">
+                  <label class="form-label small text-muted mb-1">Сумма (₽)</label>
+                  <input type="text" id="fuelTotal" class="form-control form-control-sm bg-white fw-bold text-primary" readonly placeholder="0.00">
+                </div>
+              </div>
+              <div class="mt-2 d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-primary btn-sm px-3" onclick="applyFuelCalc()">
+                  <i class="bi bi-check2 me-1"></i>Применить
+                </button>
+                <span class="small text-muted" id="bonusPreview"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Сумма чека (₽) <span class="text-danger">*</span></label>
+            <input type="number" name="purchase_amount" id="accruePurchase" class="form-control" step="0.01" min="0.01"
+                   placeholder="1 500.00" required>
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Литры топлива</label>
+            <input type="number" name="fuel_liters" id="accrueLiters" class="form-control" step="0.001" min="0"
+                   placeholder="40.000">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Локация</label>
+            <select name="location" id="accrueLocation" class="form-select">
+              <option value="fuel">⛽ АЗС</option>
+              <option value="base">🏪 Магазин</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Номер чека <span class="text-danger">*</span></label>
+            <input type="text" name="check_id" id="accrueCheckId" class="form-control" required>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Отмена</button>
+          <button type="submit" class="btn btn-success rounded-3 px-4" id="btnAccrue">
+            <i class="bi bi-plus-circle me-1"></i>Начислить
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Списание -->
+<div class="modal fade" id="redeemModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:16px">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title"><i class="bi bi-dash-circle me-2 text-danger"></i>Списание бонусов</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="redeemForm">
+        <div class="modal-body row g-3">
+          <div class="col-12">
+            <label class="form-label small fw-semibold">Телефон клиента</label>
+            <input type="tel" id="redeemPhone" class="form-control" placeholder="+79001234567" required>
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Сумма чека (₽) <span class="text-danger">*</span></label>
+            <input type="number" name="purchase_amount" id="redeemPurchase" class="form-control"
+                   step="0.01" min="0.01" placeholder="1 500.00" required>
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Списать бонусов <span class="text-danger">*</span></label>
+            <input type="number" name="bonus_to_redeem" id="redeemBonus" class="form-control"
+                   step="0.01" min="0.01" required>
+            <div class="form-text" id="redeemHint">Макс.: <span id="redeemMax">—</span></div>
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Локация</label>
+            <select name="location" class="form-select">
+              <option value="fuel">⛽ АЗС</option>
+              <option value="base">🏪 Магазин</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Номер чека <span class="text-danger">*</span></label>
+            <input type="text" name="check_id" id="redeemCheckId" class="form-control" required>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Отмена</button>
+          <button type="submit" class="btn btn-danger rounded-3 px-4">
+            <i class="bi bi-dash-circle me-1"></i>Списать
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Состояние ──────────────────────────────────────────────────────────────
+let currentClient = null;
+let sessionOps = [];
+
+// ── Часы ───────────────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clockBadge').textContent =
+    now.toLocaleString('ru', {day:'2-digit', month:'2-digit', year:'numeric',
+      hour:'2-digit', minute:'2-digit'});
+}
+updateClock(); setInterval(updateClock, 30000);
+
+// ── Поиск клиента ──────────────────────────────────────────────────────────
+async function findClient(phone) {
+  phone = phone.trim();
+  if (!phone) return;
+
+  const btn = document.getElementById('btnFind');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Поиск...';
+
+  document.getElementById('clientCard').classList.add('d-none');
+  document.getElementById('notFound').classList.add('d-none');
+  document.getElementById('emptyState').classList.add('d-none');
+
+  try {
+    const r = await apiPost('/api/cash/client-info', {phone});
+    if (r.ok) {
+      const data = await r.json();
+      renderClient(data);
+    } else {
+      // 404 — клиент не найден, но запомним телефон для начисления
+      currentClient = null;
+      document.getElementById('notFound').classList.remove('d-none');
+      // Предзаполняем поля модалок телефоном
+      document.getElementById('accruePhone').value = phone;
+      document.getElementById('redeemPhone').value = phone;
+      document.getElementById('accrueCheckId').value = genCheckId();
+    }
+  } catch {
+    showToast('Ошибка соединения с сервером', 'danger');
+    document.getElementById('emptyState').classList.remove('d-none');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-search me-1"></i>Найти';
+  }
+}
+
+// ── Рендер карточки ────────────────────────────────────────────────────────
+function renderClient(data) {
+  currentClient = data;
+  const initials = (data.name || data.phone)
+    .split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase().slice(0,2) || '??';
+
+  document.getElementById('clientName').textContent = data.name || 'Имя не указано';
+  document.getElementById('clientPhone').textContent = data.phone;
+  document.getElementById('clientId').textContent = '#' + data.id;
+  document.getElementById('clientBalance').textContent = formatNum(data.bonus_balance);
+  document.getElementById('clientSpent').textContent = formatNum(data.total_spent) + ' ₽';
+  document.getElementById('clientAvatar').textContent = initials;
+
+  // Предзаполняем модалки
+  document.getElementById('accruePhone').value = data.phone;
+  document.getElementById('redeemPhone').value = data.phone;
+  document.getElementById('accrueCheckId').value = genCheckId();
+  document.getElementById('redeemCheckId').value = genCheckId();
+
+  // Лимит списания
+  const maxRedeem = parseFloat(data.bonus_balance) || 0;
+  document.getElementById('redeemMax').textContent = maxRedeem.toFixed(2);
+
+  document.getElementById('clientCard').classList.remove('d-none');
+  document.getElementById('emptyState').classList.add('d-none');
+}
+
+// ── Очистить карточку ──────────────────────────────────────────────────────
+function clearClient() {
+  currentClient = null;
+  document.getElementById('clientCard').classList.add('d-none');
+  document.getElementById('notFound').classList.add('d-none');
+  document.getElementById('emptyState').classList.remove('d-none');
+  document.getElementById('phoneInput').value = '';
+  document.getElementById('phoneInput').focus();
+  sessionOps = [];
+  renderOps();
+}
+
+// ── QR ─────────────────────────────────────────────────────────────────────
+function applyQr() {
+  const val = document.getElementById('qrInput').value.trim();
+  if (!val) return;
+  document.getElementById('phoneInput').value = val;
+  bootstrap.Modal.getInstance(document.getElementById('qrModal')).hide();
+  findClient(val);
+}
+
+// ── Начисление ─────────────────────────────────────────────────────────────
+document.getElementById('accrueForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const btn = document.getElementById('btnAccrue');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>';
+
+  const payload = {
+    phone: document.getElementById('accruePhone').value,
+    purchase_amount: parseFloat(fd.get('purchase_amount')),
+    fuel_liters: fd.get('fuel_liters') ? parseFloat(fd.get('fuel_liters')) : null,
+    location: fd.get('location'),
+    check_id: fd.get('check_id'),
+    cashier_id: null,
+  };
+
+  try {
+    const r = await apiPost('/api/cash/accrue', payload);
+    const data = await r.json();
+    if (r.ok) {
+      const bonusAmt = parseFloat(data.amount_bonus);
+      if (bonusAmt <= 0) {
+        showToast('Транзакция записана, но бонусы не начислены — нет подходящего правила', 'warning');
+      } else {
+        showToast(`✓ Начислено <strong>${data.amount_bonus}</strong> бонусов`, 'success');
+      }
+      addOp('accrual', payload.purchase_amount, data.amount_bonus, payload.check_id);
+      bootstrap.Modal.getInstance(document.getElementById('accrueModal')).hide();
+      await refreshClient(payload.phone);
+    } else {
+      showToast(data.detail || 'Ошибка начисления', 'danger');
+    }
+  } catch { showToast('Ошибка соединения', 'danger'); }
+  finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Начислить';
+    document.getElementById('accrueCheckId').value = genCheckId();
+  }
+});
+
+// ── Списание ───────────────────────────────────────────────────────────────
+document.getElementById('redeemForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const payload = {
+    phone: document.getElementById('redeemPhone').value,
+    purchase_amount: parseFloat(fd.get('purchase_amount')),
+    bonus_to_redeem: parseFloat(fd.get('bonus_to_redeem')),
+    location: fd.get('location'),
+    check_id: fd.get('check_id'),
+    cashier_id: null,
+  };
+
+  try {
+    const r = await apiPost('/api/cash/redeem', payload);
+    const data = await r.json();
+    if (r.ok) {
+      showToast(`✓ Списано <strong>${data.amount_bonus}</strong> бонусов`, 'success');
+      addOp('redemption', payload.purchase_amount, '-' + Math.abs(parseFloat(data.amount_bonus)), payload.check_id);
+      bootstrap.Modal.getInstance(document.getElementById('redeemModal')).hide();
+      await refreshClient(payload.phone);
+    } else {
+      showToast(data.detail || 'Ошибка списания', 'danger');
+    }
+  } catch { showToast('Ошибка соединения', 'danger'); }
+  finally {
+    document.getElementById('redeemCheckId').value = genCheckId();
+  }
+});
+
+// ── Калькулятор топлива ────────────────────────────────────────────────────
+let accrualRules = null;
+async function loadRules() {
+  if (accrualRules) return accrualRules;
+  try {
+    const r = await fetch('/api/mobile/rules');
+    if (r.ok) accrualRules = await r.json();
+  } catch {}
+  return accrualRules || [];
+}
+
+function calcFuelTotal() {
+  const price = parseFloat(document.getElementById('fuelPrice').value) || 0;
+  const liters = parseFloat(document.getElementById('fuelLitersCalc').value) || 0;
+  const total = price * liters;
+  document.getElementById('fuelTotal').value = total > 0 ? total.toFixed(2) : '';
+  updateBonusPreview(total, liters);
+}
+
+async function updateBonusPreview(total, liters) {
+  const rules = await loadRules();
+  if (!rules.length || total <= 0) { document.getElementById('bonusPreview').textContent = ''; return; }
+  const level = (currentClient?.level?.value || currentClient?.level || 'bronze').toLowerCase();
+  const loc = document.getElementById('accrueLocation')?.value || 'fuel';
+  // Найти подходящее правило
+  const rule = rules.find(r =>
+    r.location === loc &&
+    (!r.client_level || r.client_level === level) &&
+    parseFloat(r.min_purchase || 0) <= total
+  ) || rules.find(r => r.location === loc && !r.client_level);
+  if (!rule) { document.getElementById('bonusPreview').textContent = ''; return; }
+  let est = 0;
+  if (rule.accrual_type === 'percent') {
+    est = total * parseFloat(rule.accrual_value) / 100;
+  } else if (rule.accrual_type === 'bonus_per_liter') {
+    est = liters * parseFloat(rule.accrual_value);
+  } else if (rule.accrual_type === 'fixed') {
+    est = parseFloat(rule.accrual_value);
+  }
+  document.getElementById('bonusPreview').innerHTML =
+    `<span class="text-success fw-semibold">≈ ${est.toFixed(2)} бонусов</span>`;
+}
+
+function applyFuelCalc() {
+  const price = parseFloat(document.getElementById('fuelPrice').value) || 0;
+  const liters = parseFloat(document.getElementById('fuelLitersCalc').value) || 0;
+  const total = price * liters;
+  if (total > 0) {
+    document.getElementById('accruePurchase').value = total.toFixed(2);
+    document.getElementById('accrueLiters').value = liters || '';
+  }
+}
+
+document.getElementById('fuelPrice').addEventListener('input', calcFuelTotal);
+document.getElementById('fuelLitersCalc').addEventListener('input', calcFuelTotal);
+document.getElementById('accrueLocation').addEventListener('change', () => {
+  const total = parseFloat(document.getElementById('fuelTotal').value) || 0;
+  const liters = parseFloat(document.getElementById('fuelLitersCalc').value) || 0;
+  updateBonusPreview(total, liters);
+});
+
+// ── Авто-расчёт лимита списания ────────────────────────────────────────────
+document.getElementById('redeemPurchase').addEventListener('input', function() {
+  const purchase = parseFloat(this.value) || 0;
+  const balance = parseFloat(currentClient?.bonus_balance || 0);
+  const max30 = purchase * 0.30;
+  const max = Math.min(balance, max30);
+  document.getElementById('redeemMax').textContent = max.toFixed(2);
+  document.getElementById('redeemBonus').max = max;
+});
+
+// ── Обновить клиента после операции ───────────────────────────────────────
+async function refreshClient(phone) {
+  try {
+    const r = await apiPost('/api/cash/client-info', {phone});
+    if (r.ok) renderClient(await r.json());
+  } catch {}
+}
+
+// ── История операций (сессия) ──────────────────────────────────────────────
+function addOp(type, purchase, bonus, checkId) {
+  const time = new Date().toLocaleTimeString('ru', {hour:'2-digit', minute:'2-digit'});
+  sessionOps.unshift({type, purchase, bonus, checkId, time});
+  renderOps();
+}
+
+function renderOps() {
+  const el = document.getElementById('opList');
+  document.getElementById('opCount').textContent = sessionOps.length;
+  if (!sessionOps.length) {
+    el.innerHTML = '<div class="text-muted small text-center py-2">Операций пока нет</div>';
+    return;
+  }
+  el.innerHTML = sessionOps.map(op => `
+    <div class="op-item">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-${op.type === 'accrual' ? 'plus-circle-fill text-success' : 'dash-circle-fill text-danger'}"></i>
+        <div>
+          <div class="small fw-semibold">${op.type === 'accrual' ? 'Начисление' : 'Списание'}</div>
+          <div class="text-muted" style="font-size:.75rem">Чек ${op.checkId} · ${op.time}</div>
+        </div>
+      </div>
+      <div class="${parseFloat(op.bonus) >= 0 ? 'op-plus' : 'op-minus'}">
+        ${parseFloat(op.bonus) >= 0 ? '+' : ''}${op.bonus} бонусов
+      </div>
+    </div>`).join('');
+}
+
+// ── Вспомогательные ────────────────────────────────────────────────────────
+function genCheckId() {
+  return 'CHK-' + Date.now().toString(36).toUpperCase();
+}
+function formatNum(v) {
+  return parseFloat(v || 0).toLocaleString('ru', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+// ── Events ─────────────────────────────────────────────────────────────────
+document.getElementById('btnFind').addEventListener('click', () =>
+  findClient(document.getElementById('phoneInput').value));
+document.getElementById('phoneInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') findClient(e.target.value);
+});
+document.getElementById('qrInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') applyQr();
+});
+
+// Открыли модалку начисления — убедимся что чек уникален и загрузим правила
+document.getElementById('accrueModal').addEventListener('show.bs.modal', () => {
+  if (!document.getElementById('accrueCheckId').value)
+    document.getElementById('accrueCheckId').value = genCheckId();
+  loadRules(); // preload
+});
+document.getElementById('redeemModal').addEventListener('show.bs.modal', () => {
+  if (!document.getElementById('redeemCheckId').value)
+    document.getElementById('redeemCheckId').value = genCheckId();
+});
+</script>
+{% endblock %}
