@@ -17,4 +17,5 @@ aiofiles
 qrcode[pil]
 python-dateutil
 requests
+httpx
 openpyxl
